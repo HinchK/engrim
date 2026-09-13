@@ -3198,6 +3198,198 @@ def cmd_embed(conn, a) -> None:
     print(f"embedded {done} record(s) with {name} -> project={project}")
 
 
+def cmd_ent(conn, a) -> None:
+    """Execute tasks directly in Engrim Enterprise prod with live trace inspection."""
+    import time
+    import urllib.request
+
+    server_url = (getattr(a, "server", None) or os.environ.get("ENGRIM_ENTERPRISE_URL", "http://localhost:8080")).rstrip("/")
+    action = getattr(a, "action", "run")
+    raw_ask = getattr(a, "ask", [])
+    if isinstance(raw_ask, list):
+        tokens = raw_ask
+        ask = " ".join(tokens).strip()
+    else:
+        tokens = (raw_ask or "").split()
+        ask = (raw_ask or "").strip()
+
+    # Parse sub-action shortcuts from positional arguments
+    if tokens:
+        first = tokens[0].lower()
+        if first in ("status", "traces", "sync", "directives"):
+            action = first
+            ask = " ".join(tokens[1:]).strip() or None
+        elif first == "trace":
+            action = "trace"
+            if len(tokens) > 1:
+                a.trace_id = tokens[1]
+            ask = None
+        elif first.startswith("trc-"):
+            action = "trace"
+            a.trace_id = first
+            ask = None
+        elif first == "run":
+            action = "run"
+            ask = " ".join(tokens[1:]).strip()
+
+    if action == "status":
+        try:
+            req = urllib.request.Request(f"{server_url}/api/v1/health")
+            with urllib.request.urlopen(req, timeout=4.0) as resp:
+                data = json.loads(resp.read().decode())
+                stats = data.get("stats", {})
+                print(f"[*] Engrim Enterprise In-VPC Substrate: {server_url} (v{data.get('version', '0.1.0')})")
+                print(f"    Status: {data.get('status')} | Active Nodes: {stats.get('active_nodes', 0)} | Agents: {stats.get('active_agents', 0)}")
+                print(f"    Decisions: {stats.get('total_decisions', 0)} | Directives: {stats.get('total_directives', 0)}")
+                print(f"    Tokens Burned: {stats.get('total_tokens', 0):,} | Tokens Saved: {stats.get('tokens_saved_estimate', 0):,}")
+                return
+        except Exception as e:
+            sys.stderr.write(f"Error connecting to Engrim Enterprise at {server_url}: {e}\n")
+            sys.exit(1)
+
+    if action == "traces":
+        try:
+            req = urllib.request.Request(f"{server_url}/api/v1/traces?limit=15")
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                data = json.loads(resp.read().decode())
+                traces = data.get("traces", [])
+                print(f"=== Engrim Enterprise Execution Traces ({len(traces)}) ===")
+                for t in traces:
+                    print(f"  • {t['trace_id']} [{t['status'].upper()}] - {t['operation']} ({t['total_duration_ms']}ms)")
+                    print(f"    Summary: {t['summary']}")
+                    print(f"    Actor: {t['actor']} | Created: {t['created_at']}")
+                return
+        except Exception as e:
+            sys.stderr.write(f"Error fetching traces: {e}\n")
+            sys.exit(1)
+
+    if action == "trace":
+        tid = getattr(a, "trace_id", None) or ask
+        if not tid:
+            sys.stderr.write("Please specify a trace ID (e.g. engrim ent trace trc-...)\n")
+            sys.exit(1)
+        try:
+            req = urllib.request.Request(f"{server_url}/api/v1/traces/{tid}")
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                trace = json.loads(resp.read().decode())
+                print(f"=== Execution Trace: {trace['trace_id']} ===")
+                print(f"Operation: {trace['operation']} | Status: {trace['status'].upper()} | Latency: {trace['total_duration_ms']}ms")
+                print(f"Actor: {trace['actor']} | Project: {trace['project']}")
+                print(f"Summary: {trace['summary']}")
+                print("\nSpans Breakdown:")
+                for i, s in enumerate(trace.get("spans", []), 1):
+                    print(f"  {i}. {s['name']} - {s['duration_ms']}ms [{s['status']}]")
+                    if s.get("details"):
+                        for k, v in s["details"].items():
+                            print(f"     • {k}: {v}")
+                return
+        except Exception as e:
+            sys.stderr.write(f"Error fetching trace {tid}: {e}\n")
+            sys.exit(1)
+
+    if action == "directives":
+        try:
+            req = urllib.request.Request(f"{server_url}/api/v1/directives")
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                data = json.loads(resp.read().decode())
+                dirs = data.get("directives", [])
+                print(f"=== Engrim Enterprise Directives ({len(dirs)}) ===")
+                for d in dirs:
+                    print(f"  #{d['id']} [{d['status'].upper()}] - {d['title']} ({d.get('tokens_burned', 0):,} tokens)")
+                return
+        except Exception as e:
+            sys.stderr.write(f"Error fetching directives: {e}\n")
+            sys.exit(1)
+
+    if action == "sync":
+        try:
+            import subprocess
+            res = subprocess.run([sys.executable, "-m", "engrim_enterprise.client", server_url], capture_output=True, text=True)
+            print(res.stdout or res.stderr)
+            return
+        except Exception as e:
+            sys.stderr.write(f"Error running sync: {e}\n")
+            sys.exit(1)
+
+    if action in ("run", "dispatch"):
+        if not ask or not ask.strip():
+            sys.stderr.write("Usage: engrim ent [\"your ask / directive prompt\"] [options]\n")
+            sys.exit(1)
+
+        project = _resolve_project(getattr(a, "project", "auto"))
+        payload = {
+            "title": ask.strip(),
+            "description": f"Executed via engrim ent CLI for project {project}",
+            "project": "engrim-enterprise" if "engrim" in project else project,
+            "model_ensemble": getattr(a, "model", "gemini-3.8-flash"),
+            "token_budget": getattr(a, "budget", 50000),
+            "max_workers": getattr(a, "workers", 6),
+        }
+
+        try:
+            # 1. Dispatch directive
+            req = urllib.request.Request(
+                f"{server_url}/api/v1/directives",
+                data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                created = json.loads(resp.read().decode())
+                d_id = created["directive_id"]
+                print(f"[*] Dispatched Directive #{d_id} into Engrim Enterprise In-VPC Substrate")
+                print(f"    Objective: '{ask.strip()}'")
+                print(f"    Executing across autonomous speculative candidate pods...")
+
+            # 2. Wait for completion
+            t_start = time.time()
+            completed_directive = None
+            while time.time() - t_start < 45.0:
+                time.sleep(1.0)
+                d_req = urllib.request.Request(f"{server_url}/api/v1/directives")
+                with urllib.request.urlopen(d_req, timeout=4.0) as d_resp:
+                    data = json.loads(d_resp.read().decode())
+                    for d in data.get("directives", []):
+                        if d["id"] == d_id and d["status"] in ("completed", "failed", "budget_exceeded"):
+                            completed_directive = d
+                            break
+                if completed_directive:
+                    break
+
+            if not completed_directive:
+                print(f"[!] Directive #{d_id} running asynchronously in background worker fleet.")
+                print(f"    Check status with: engrim ent status")
+                return
+
+            print(f"\n[✓] Directive #{d_id} Finished with Status: {completed_directive['status'].upper()}")
+            print(f"    Result: {completed_directive.get('result_summary')}")
+            print(f"    Tokens Burned: {completed_directive.get('tokens_burned', 0):,} (Nominal Budget: {completed_directive.get('token_budget', 0):,})")
+            
+            comp = completed_directive.get("comparison_data") or {}
+            if comp:
+                print(f"    Arbitration Winner: {comp.get('superior_candidate_id')} (Rating: {comp.get('superior_score')}%)")
+                print(f"    Strategy: {comp.get('superior_strategy')} | Runners Dispatched: {comp.get('runners_dispatched')}")
+                if comp.get("arbitration_decision"):
+                    print(f"    Rationale: {comp.get('arbitration_decision')}")
+
+            # 3. Check for any recent traces generated
+            try:
+                t_req = urllib.request.Request(f"{server_url}/api/v1/traces?limit=1")
+                with urllib.request.urlopen(t_req, timeout=3.0) as t_resp:
+                    t_data = json.loads(t_resp.read().decode())
+                    traces = t_data.get("traces", [])
+                    if traces:
+                        latest = traces[0]
+                        print(f"\n[*] Execution Trace Recorded: {latest['trace_id']} ({latest['total_duration_ms']}ms)")
+                        print(f"    Run 'engrim ent trace {latest['trace_id']}' to inspect microsecond spans.")
+            except Exception:
+                pass
+
+        except Exception as e:
+            sys.stderr.write(f"Failed to execute directive in Engrim Enterprise: {e}\n")
+            sys.exit(1)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="engrim",
@@ -3458,6 +3650,21 @@ def build_parser() -> argparse.ArgumentParser:
     psv = sub.add_parser("serve", help="serve engrim over stdio (e.g. --mcp)")
     psv.add_argument("--mcp", action="store_true", default=True, help="run engrim as an MCP server over stdio")
     psv.set_defaults(func=cmd_serve)
+
+    # engrim ent — Enterprise In-VPC Substrate Bridge
+    pent = sub.add_parser("ent", help="Engrim Enterprise In-VPC Substrate & Autonomous Directive Runner")
+    pent.add_argument("ask", nargs="*", default=[],
+                      help="Directive or task prompt to execute in Engrim Enterprise prod")
+    pent.add_argument("--action", choices=["run", "status", "traces", "trace", "sync", "directives"], default="run",
+                      help="Enterprise action to perform (default: run)")
+    pent.add_argument("--trace-id", default=None, help="Trace ID to inspect with --action trace")
+    pent.add_argument("-p", "--project", default="auto")
+    pent.add_argument("-m", "--model", default="gemini-3.8-flash")
+    pent.add_argument("-b", "--budget", type=int, default=50000)
+    pent.add_argument("-w", "--workers", type=int, default=6)
+    pent.add_argument("--server", default=os.environ.get("ENGRIM_ENTERPRISE_URL", "http://localhost:8080"),
+                      help="Engrim Enterprise In-VPC Server URL (default: http://localhost:8080)")
+    pent.set_defaults(func=cmd_ent)
     return p
 
 
