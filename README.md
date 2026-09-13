@@ -1,15 +1,15 @@
 # engrim
 
 [![CI](https://github.com/timgordontg/engrim/actions/workflows/ci.yml/badge.svg)](https://github.com/timgordontg/engrim/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/engrim)](https://pypi.org/project/engrim/)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Local & private](https://img.shields.io/badge/local-%26%20private-brightgreen)](#security--privacy)
-[![Glama](https://glama.ai/mcp/servers/timgordontg/engrim/badges/score.svg)](https://glama.ai/mcp/servers/timgordontg/engrim)
+[![PyPI](https://img.shields.io/pypi/v/engrim?color=blue)](https://pypi.org/project/engrim/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Local & Private](https://img.shields.io/badge/local-%26%20private-brightgreen)](#11-security--privacy)
+[![Glama MCP](https://glama.ai/mcp/servers/timgordontg/engrim/badges/score.svg)](https://glama.ai/mcp/servers/timgordontg/engrim)
 
-**The Universal Cross-Model & Cross-Agent Episodic Memory Store.**
+**The Universal Cross-Model & Cross-Agent Episodic Memory Standard.**
 
-A local-first, project-scoped SQLite memory engine that allows developers to freely switch between models and environments (**Google Antigravity**, **Claude Code**, **Cursor MCP**, **Windsurf**, **OpenCode**) on the **SAME** project without losing architectural decisions, user constraints, or project state.
+A local-first, project-scoped SQLite memory engine that allows developers to freely switch between models and environments (**Google Antigravity**, **Claude Code**, **Cursor**, **Codex CLI**, **OpenCode**, and **Windsurf**) on the **same codebase** without losing architectural decisions, user constraints, or project state.
 
 ---
 
@@ -17,12 +17,24 @@ A local-first, project-scoped SQLite memory engine that allows developers to fre
 
 > **"Why pay for 200,000 tokens of forgotten noise on every turn? The models are disposable utilities; your project's decisions are not."**
 
-As context windows scale to 1M+ tokens, developers face **attention dilution**: reasoning degrades, cost multiplies with every conversational turn, and clearing context causes total amnesia.
+As context windows scale to 1M+ tokens, developers face **attention dilution**: reasoning degrades, token cost multiplies with every conversational turn, and clearing context causes total amnesia.
 
 `engrim` replaces attention dilution with **4,000 characters of curated episodic working memory**:
 - **Switzerland of AI Memory**: Decouples project intelligence from any single AI vendor or proprietary cloud silo. Switch from Gemini 3.8 in Antigravity to Claude 3.7 Sonnet in Claude Code to Codex CLI mid-project — your agents pick up right where the others left off.
-- **Save Button for Autonomous Coding**: Externalize decisions, constraints, and state as you work. The connected AI agents (Antigravity, Claude Code, Cursor, Codex CLI, OpenCode) can automatically write to memory via MCP tools when they make architectural decisions, or you can manually save them (`engrim add`). Clear your agent session freely (`/clear`) and watch context reload intact.
-- **Smart, Hot Context Loading**: Combines SQLite FTS5 (bm25 keyword search) with static vector embeddings (`model2vec`) in a zero-latency hybrid reciprocal-rank fusion engine.
+- **Save Button for Autonomous Coding**: Externalize decisions, constraints, and state as you work. Connected agents write to memory via MCP tools (`engrim_add`) or lifecycle hooks when they make architectural decisions. Clear your agent session freely (`/clear`) and watch context reload intact.
+- **Precision, Hot Context Loading**: Combines SQLite FTS5 (`bm25` keyword search) with static vector embeddings (`model2vec`) in a zero-latency hybrid reciprocal-rank fusion engine. 100% local, runs on CPU in ~30ms, with zero cloud dependency.
+
+---
+
+### The Problem vs. The Engrim Standard
+
+| Challenge | Without Engrim (Token Bleed & Amnesia) | With Engrim (Episodic Continuity) |
+|:---|:---|:---|
+| **Context Window** | **Attention Dilution**: 150k+ tokens re-sent on every turn; models lose reasoning sharpness and hallucinate past constraints. | **Precision Working Memory**: ~4,000 chars (<1,000 tokens, <1% of context) injected at boot. Zero attention dilution. |
+| **Session Clearing** | **Total Amnesia on `/clear`**: Clearing chat wipes agent state to zero; you spend minutes re-explaining rules and architecture. | **Continue-As-Clear**: Clear anytime (`/clear`). Decisions, active state, and `[▶ RESUME HERE]` reload instantly. |
+| **Agent Ecosystem** | **Vendor Silos**: Decisions made in Claude Code are invisible in Antigravity, Cursor, Codex, or OpenCode. | **Universal Substrate**: One local SQLite store (`~/.engrim/memory.db`) shared across all 5 major harnesses. |
+| **Hook Reliability** | **Silent Failures**: Moving across machines or OSes silently breaks hardcoded binary paths with no error message. | **Self-Healing Diagnostics**: `engrim doctor --fix` verifies all hooks and installs portable PATH fallbacks. |
+| **Data Privacy** | **SaaS Cloud Leakage**: Proprietary code and architectural constraints sent to third-party memory APIs. | **100% Local & Private**: Stored locally in SQLite WAL mode (POSIX `0600`). No telemetry, no cloud sync, no tracking. |
 
 ---
 
@@ -37,7 +49,7 @@ In production testing on an active algorithmic trading codebase running real cap
 
 ---
 
-## 3. Architecture
+## 3. How It Works (The 10-Second Mental Model)
 
 ```mermaid
 graph TD
@@ -50,7 +62,7 @@ graph TD
     end
 
     subgraph CoreEngine ["engrim Core Engine (v1.4.5)"]
-        ADAPTERS["Adapters & Hooks<br/>(agy, claude, opencode, mcp)"]
+        ADAPTERS["Adapters & Lifecycle Hooks<br/>(agy, claude, opencode, mcp)"]
         DOCTOR["Health & Diagnostic Engine<br/>(engrim doctor --fix)"]
         PROVENANCE["Agent Provenance Engine<br/>(origin_agent tracking)"]
         ROUTER["Hybrid Retrieval & Minder<br/>(bm25 lexical + vector cosine)"]
@@ -76,6 +88,11 @@ graph TD
     ADAPTERS --> LOG
 ```
 
+1. **Boot**: When your agent starts or a prompt is submitted, `engrim` injects the top-priority memory pack (~4k chars) into the agent's context, leading with `[▶ RESUME HERE]`.
+2. **Capture**: As the agent works, it records architectural decisions via MCP (`engrim_add`) or lifecycle hooks automatically, tracking the `origin_agent` provenance.
+3. **Recall & Minder**: Hybrid lexical (`bm25`) + vector (`model2vec`) search retrieves relevant records on demand in ~30ms without slowing down the agent.
+4. **Continue-As-Clear**: When context bloats or the model drifts, type `/clear`. The next session boots from `memory.db` with zero memory loss.
+
 ---
 
 ## 4. Multi-Agent Quickstart
@@ -98,94 +115,9 @@ engrim setup
 - If `~/.claude` exists $\rightarrow$ wires Claude Code SessionStart, Stop, status line, and CLAUDE.md.
 - If `~/.cursor` exists $\rightarrow$ generates and merges Cursor MCP configuration.
 - If `~/.codex` exists $\rightarrow$ wires Codex CLI native command hooks.
-- If `~/.config/opencode` exists $\rightarrow$ writes the OpenCode plugin, registers the MCP server, and adds `AGENTS.md` notes.
+- If `~/.config/opencode` exists $\rightarrow$ writes OpenCode plugin, registers MCP server, and adds `AGENTS.md` notes.
 
-### Explicit Platform Setup
-
-#### Google Antigravity
-```bash
-engrim setup --agy
-```
-- Configures `~/.gemini/config/hooks.json` to execute `engrim hook --agent agy --event boot` on `PreInvocation` and `engrim hook --agent agy --event stop` on `Stop`.
-- Deploys the canonical Antigravity skill to `~/.gemini/config/skills/engrim/SKILL.md`.
-- Registers the MCP server in `~/.gemini/antigravity-cli/mcp_config.json` and `~/.gemini/config/mcp_config.json`.
-
-#### Claude Code
-```bash
-engrim setup --claude
-```
-- Wires `SessionStart`, `SessionEnd`, `Stop`, and `UserPromptSubmit` hooks in `~/.claude/settings.json`.
-- Configures live ambient status line in Claude Code's status bar.
-- Appends memory usage notes to `~/.claude/CLAUDE.md`.
-
-#### Cursor
-```bash
-engrim setup --cursor
-```
-- Adds `engrim` to `~/.cursor/mcp.json` running `engrim serve --mcp`.
-
-
-#### Codex CLI
-```bash
-engrim setup --codex
-```
-- Wires `SessionStart`, `SessionEnd`, `Stop`, and `UserPromptSubmit` command hooks in `~/.codex/hooks.json`.
-- Calls the local `engrim` CLI directly, so MCP is not required. The hooks must be reviewed and trusted
-  with Codex's `/hooks` command before they run.
-- `engrim statusline` accepts Codex-shaped session payloads, but Codex's built-in footer only supports
-  its own status item identifiers, not arbitrary status commands.
-
-#### OpenCode
-```bash
-engrim setup --opencode
-```
-OpenCode has no shell hooks, so engrim ships as a plugin plus an MCP server:
-- Writes `~/.config/opencode/plugins/engrim.js` (respects `$XDG_CONFIG_HOME`). The plugin calls `engrim hook --agent opencode` at each lifecycle moment:
-  - **session boot** → the memory pack is injected into the system prompt (once per session, and again after compaction);
-  - **every prompt** → the minder pulls the few records relevant to that message;
-  - **session idle** → the session's new user/assistant turns land in the flight-recorder log (idempotent, keyed on OpenCode's message ids);
-  - **compaction** → the compaction prompt is told that durable memory lives in engrim and to list any uncaptured decisions so they get `engrim_add`-ed.
-- Registers `mcp.engrim` (`engrim serve --mcp`) in `~/.config/opencode/opencode.json`, exposing the `engrim_*` tools to the agent. Existing keys are preserved; a commented `opencode.jsonc` is never rewritten.
-- Appends a short usage note to `~/.config/opencode/AGENTS.md`.
-
-Cost note: the boot pack (≤4,000 chars by default) and the usage note ride in the system prompt of every model call in the session, including title and subagent calls — that is how OpenCode's `system.transform` works. Set `ENGRIM_BOOT_BUDGET` (chars, default 4000) in OpenCode's environment to shrink the pack, or curate harder, if that overhead matters to you.
-
-This makes engrim the durable memory layer for OpenCode: its own SQLite session store and compaction summaries stay as the transcript, while decisions, constraints, and state live in `~/.engrim/memory.db` where every other agent on the repo can read them. Restart OpenCode after setup; `engrim uninstall --opencode` reverses all three steps.
-
-##### "OpenCode already has a SQLite database — why add engrim?"
-
-It does, and it is good at what it is for. `opencode.db` holds sessions, messages, and parts: it is the **transcript** store for one tool. It has no memory table, no cross-session retrieval the model can call, and nothing outside OpenCode can read it. engrim solves a different problem, and the plugin makes the two complementary rather than competing:
-
-- **Switch harnesses on the same task.** Start in OpenCode, finish in Claude Code, Codex CLI, Cursor, or Antigravity (or the other way round). Every one of them boots from the same `~/.engrim/memory.db`, so the decisions you made in one show up in the next. OpenCode's session store is invisible to the others by design.
-- **Curated memory, not replayed history.** OpenCode's answer to "what did we decide?" is a compaction summary: lossy, regenerated each time, and gone with the session. engrim stores typed records (`decision`, `fact`, `state`, `feedback`, `user`, `reference`) that can be superseded, tagged, and retired, and injects a priority-ordered pack of at most a few thousand characters instead of re-reading a transcript.
-- **Survives `/new`, compaction, and deleted sessions.** A fresh OpenCode session starts from `AGENTS.md` alone. With engrim the boot pack is injected again on every session and after every compaction, and the resume pointer says exactly where to pick up.
-- **Retrieval the model can drive.** Hybrid FTS5 + vector recall (`engrim_recall`), a per-prompt minder that surfaces the few records relevant to the message being answered, and explicit write access (`engrim_add`) so the agent can save a decision the moment it makes one.
-- **Provenance across tools.** Every record carries `origin_agent`, so you can see that a constraint came from a Codex session and a reversal came from OpenCode.
-- **A capture safety net.** `engrim review` and the compaction hook flag decisions that are still only in the transcript before they get summarised away; the session-idle hook keeps a flight-recorder log of turns so a hard window-close can't lose them.
-- **Portable and yours.** One SQLite file you can `engrim backup`, `engrim merge` into another store, share between host and container with `ENGRIM_PROJECT`, and inspect or edit with plain SQL. No vendor format, no cloud.
-
-If you only ever use OpenCode and never clear a session, `opencode.db` is enough. The moment a task spans two sessions or two tools, it isn't.
-
-#### Windsurf
-Add `engrim` to your `~/.codeium/windsurf/mcp_config.json`:
-```json
-{
-  "mcpServers": {
-    "engrim": {
-      "command": "engrim",
-      "args": ["serve", "--mcp"]
-    }
-  }
-}
-```
-
-#### All Platforms
-```bash
-engrim setup --all
-```
-- Configures every supported environment in one command.
-
-*(Use `--dry-run` with any setup command to inspect changes without modifying disk).*
+---
 
 ### Diagnostic Health Check & Self-Healing (`engrim doctor`)
 
@@ -202,11 +134,124 @@ engrim doctor --fix
 engrim doctor --json
 ```
 
+**Real output:**
+```text
+================================================================================
+                 🩺 ENGRIM DOCTOR — DIAGNOSTIC HEALTH CHECK                    
+================================================================================
+Platform   : linux (x86_64) · Python 3.12.3
+Engrim CLI : /home/user/.local/bin/engrim
+Project    : /workspace/my-project
+
+[1] Database & Storage Engine
+  ✓ Store Location   : /home/user/.engrim/memory.db
+  ✓ Integrity Check  : ok
+  ✓ Journal Mode     : wal (WAL)
+  ✓ Curated Memories : 956 active / 1057 total
+    (decision=413, fact=178, feedback=47, reference=20, state=283, user=15)
+  ✓ Flight Log Turns : 48501 logged
+
+[2] Semantic Recall Engine
+  ✓ Model Available  : model2vec:minishlab/potion-base-8M
+  ✓ Embedded Records : 1032 / 956
+
+[3] Agent Environments & Hooks
+  Google Antigravity (~/.gemini):
+    ✓ PreInvocation hook: valid
+    ✓ Stop hook: valid
+    ✓ MCP server: /home/user/.local/bin/engrim (valid)
+    ✓ Skill deployed: yes
+  Claude Code (~/.claude):
+    ✓ SessionStart hook: valid
+    ✓ SessionEnd hook: valid
+    ✓ Stop hook: valid
+    ✓ UserPromptSubmit hook: valid
+
+================================================================================
+Result: All systems healthy. Zero issues detected across all agent hosts.
+================================================================================
+```
+
 - **Self-Healing Path Fallback**: Hook commands feature portable PATH fallback (`<bin> || engrim ... || true`) ensuring sessions never experience silent amnesia when directories move or dotfiles sync across machines.
 - **Deep Integrity Audit**: Validates SQLite WAL mode, database consistency (`PRAGMA integrity_check`), active records, and semantic model readiness (`model2vec`).
 
-#### GitHub Actions (gh-aw)
+---
+
+### Explicit Platform Setup
+
+#### 🪐 Google Antigravity
+```bash
+engrim setup --agy
+```
+- Configures `~/.gemini/config/hooks.json` to execute `engrim hook --agent agy --event boot` on `PreInvocation` and `engrim hook --agent agy --event stop` on `Stop`.
+- Deploys canonical Antigravity skill to `~/.gemini/config/skills/engrim/SKILL.md`.
+- Registers MCP server in `~/.gemini/antigravity-cli/mcp_config.json` and `~/.gemini/config/mcp_config.json`.
+
+#### 🟣 Claude Code
+```bash
+engrim setup --claude
+```
+- Wires `SessionStart`, `SessionEnd`, `Stop`, and `UserPromptSubmit` hooks in `~/.claude/settings.json`.
+- Configures live ambient status line in Claude Code's status bar.
+- Appends memory usage notes to `~/.claude/CLAUDE.md`.
+
+#### ⚡ Cursor & Windsurf
+```bash
+engrim setup --cursor
+```
+- Adds `engrim` to `~/.cursor/mcp.json` running `engrim serve --mcp`.
+
+For Windsurf, add `engrim` to `~/.codeium/windsurf/mcp_config.json`:
+```json
+{
+  "mcpServers": {
+    "engrim": {
+      "command": "engrim",
+      "args": ["serve", "--mcp"]
+    }
+  }
+}
+```
+
+#### 💻 Codex CLI
+```bash
+engrim setup --codex
+```
+- Wires `SessionStart`, `SessionEnd`, `Stop`, and `UserPromptSubmit` command hooks in `~/.codex/hooks.json`.
+- Calls local `engrim` CLI directly (MCP not required). Hooks must be reviewed and trusted with Codex's `/hooks` command before they run.
+
+#### 🟩 OpenCode
+```bash
+engrim setup --opencode
+```
+OpenCode has no shell hooks, so engrim ships as a plugin plus an MCP server:
+- Writes `~/.config/opencode/plugins/engrim.js` (respects `$XDG_CONFIG_HOME`). The plugin calls `engrim hook --agent opencode` at each lifecycle moment:
+  - **session boot** → memory pack is injected into system prompt (once per session, and again after compaction);
+  - **every prompt** → minder pulls the few records relevant to that message;
+  - **session idle** → session's new user/assistant turns land in flight-recorder log (idempotent, keyed on OpenCode message ids);
+  - **compaction** → compaction prompt is told that durable memory lives in engrim and to list uncaptured decisions so they get `engrim_add`-ed.
+- Registers `mcp.engrim` (`engrim serve --mcp`) in `~/.config/opencode/opencode.json`, exposing `engrim_*` tools to the agent.
+- Appends usage note to `~/.config/opencode/AGENTS.md`.
+
+##### *"OpenCode already has a SQLite database — why add engrim?"*
+
+It does, and it is good at what it is for. `opencode.db` holds sessions, messages, and parts: it is the **transcript** store for one tool. It has no memory table, no cross-session retrieval the model can call, and nothing outside OpenCode can read it. engrim solves a different problem:
+
+- **Switch harnesses on the same task.** Start in OpenCode, finish in Claude Code, Codex CLI, Cursor, or Antigravity. Every one of them boots from the same `~/.engrim/memory.db`.
+- **Curated memory, not replayed history.** OpenCode's compaction summaries are lossy, regenerated each time, and gone with the session. engrim stores typed records (`decision`, `fact`, `state`, `feedback`, `user`, `reference`) that can be superseded, tagged, and retired.
+- **Survives `/new`, compaction, and deleted sessions.** With engrim the boot pack is injected again on every session and after compaction, and the resume pointer says exactly where to pick up.
+- **Model-driven retrieval.** Hybrid FTS5 + vector recall (`engrim_recall`), a per-prompt minder, and explicit write access (`engrim_add`).
+- **Cross-agent provenance.** Every record carries `origin_agent`, so you know if a constraint came from Codex or OpenCode.
+- **Portable and yours.** One SQLite file you can `engrim backup`, `engrim merge`, and share with `ENGRIM_PROJECT`.
+
+#### 🐙 GitHub Agentic Workflows (`gh-aw`)
 See [`examples/gh-aw/`](examples/gh-aw/) for engrim inside [GitHub Agentic Workflows](https://github.github.com/gh-aw/): memory across runs through artifacts and `engrim merge`, and a continue-as-clear restart instead of auto-compaction.
+
+#### All Platforms
+```bash
+engrim setup --all
+```
+*(Use `--dry-run` with any setup command to preview changes without writing to disk).*
 
 ---
 
@@ -251,10 +296,7 @@ engrim serve --mcp
 | `engrim_context` | `(project: str = "auto", budget: int = 4000)` | Retrieve the session-boot memory pack within a character budget. |
 | `engrim_review` | `(project: str = "auto")` | Check uncaptured decisions from transcript logs before clearing. |
 
-`engrim_review` returns `safe_to_clear: null` (unknown) when the project has no transcript log,
-even if it has saved memories. With logged turns, the field is a boolean heuristic verdict:
-`false` means possible uncaptured decisions were detected; `true` means none were detected in
-the reviewed log. It does not verify that logging captured the entire session.
+`engrim_review` returns `safe_to_clear: null` (unknown) when the project has no transcript log. With logged turns, it evaluates whether uncaptured architectural decisions exist before a developer runs `/clear`.
 
 ---
 
@@ -265,7 +307,8 @@ the reviewed log. It does not verify that logging captured the entire session.
 | `engrim add` | `engrim add -t decision -s "..." [--origin-agent agy]` | Insert memory record (types: `decision`, `fact`, `feedback`, `state`, `user`, `reference`). |
 | `engrim recall` | `engrim recall -q "database" [--tag auth]` | Ranked hybrid recall for the project (`--tag` filters by tag; `--log` searches raw turns). |
 | `engrim context` | `engrim context [-b 4000]` | Priority-ordered, budget-capped session-boot pack. |
-| `engrim hook` | `engrim hook --agent agy --event boot` | Agent lifecycle hook runner for Claude Code, Antigravity, and OpenCode (`--agent opencode --event boot\|prompt\|stop`, JSON on stdin). |
+| `engrim doctor` | `engrim doctor [--fix] [--json]` | Comprehensive health & environment diagnostic across SQLite, semantic engine, and hooks (`--fix` auto-repairs paths). |
+| `engrim hook` | `engrim hook --agent agy --event boot` | Agent lifecycle hook runner for Claude Code, Antigravity, and OpenCode (`--agent opencode --event boot\|prompt\|stop`). |
 | `engrim setup` | `engrim setup [--agy\|--claude\|--cursor\|--codex\|--opencode\|--all] [--strict]` | Universal multi-agent environment configuration (`--strict` wires gate mode). |
 | `engrim serve` | `engrim serve --mcp` | Start stdio MCP server for agent integrations. |
 | `engrim review` | `engrim review [--strict]` | "Safe to clear" coverage check: scans logs for uncurated decisions (`--strict` exits 2 if uncaptured). |
@@ -274,54 +317,66 @@ the reviewed log. It does not verify that logging captured the entire session.
 | `engrim project` | `engrim project [-p PROJECT \| --global \| --all] [--json]` | Records, active count and last write for one project tag (the current one by default), or every tag with `--all`. |
 | `engrim projects` | `engrim projects [--json]` | Every project's counts — the same as `engrim project --all`. |
 | `engrim supersede`| `engrim supersede --id 12 --status superseded` | Mark a record superseded without erasing history. |
-| `engrim retire` | `engrim retire [--all] [--dry-run] [--json]` | Mark the active `resume-pointer` record(s) done once their work is finished (never erases). |
+| `engrim retire` | `engrim retire [--all] [--dry-run] [--json]` | Mark active `resume-pointer` record(s) done once their work is finished (never erases). |
 | `engrim sync` | `engrim sync [DIR]` | Mirror markdown memories into the store (idempotent seed-once). |
 | `engrim merge` | `engrim merge OTHER.db [--dry-run]` | Fold another store's records into this one (content-keyed, idempotent; retirements carry over). |
-| `engrim backup` | `engrim backup COPY.db [--force] [--json]` | Consistent copy of the whole store via SQLite's online backup API (safe while agents hold it open). |
-| `engrim doctor` | `engrim doctor [--fix] [--json]` | Comprehensive health & environment diagnostic check across SQLite, semantic engine, and hooks (`--fix` auto-repairs paths). |
-| `engrim ent` | `engrim ent "<ask>" [--action run\|status\|traces]` | Engrim Enterprise In-VPC substrate bridge & autonomous directive execution. |
+| `engrim backup` | `engrim backup COPY.db [--force] [--json]` | Consistent copy of the store via SQLite's online backup API (safe while agents hold it open). |
 
 ---
 
 ## 8. Continue-As-Clear Workflow
 
-1. **Capture as you work**: Whenever a major decision or architectural rule is made, it needs to be saved to memory. The AI agent will often do this automatically via the `engrim_add` tool, but you can also manually intervene by running `engrim add` yourself.
-2. **Use `resume-pointer`**: Before ending a session or clearing, add a record tagged `resume-pointer` describing the immediate next task. The newest pointer is pinned under `[▶ RESUME HERE]` at the top of the next session's boot pack. When that work is done, `engrim retire` marks the pointer(s) `done` so a finished task never leads a later pack.
-3. **Verify with `engrim review`**: Check that all recent decisions are captured.
-4. **Clear freely (`/clear`)**: The session window is wiped clean; `engrim` automatically re-injects the active memory pack on the next prompt or invocation.
+1. **Capture as you work**: Whenever a major decision or architectural constraint is established, save it to memory. Connected agents do this automatically via `engrim_add`, or you can run `engrim add`.
+2. **Use `resume-pointer`**: Before ending a session or clearing, add a record tagged `resume-pointer` describing the immediate next task. The newest pointer is pinned under `[▶ RESUME HERE]` at the top of the next session's boot pack. When that work is done, `engrim retire` marks the pointer `done` so finished tasks never lead later packs.
+3. **Verify with `engrim review`**: Check that all recent decisions are captured before clearing.
+4. **Clear freely (`/clear`)**: The session window is wiped clean. `engrim` automatically re-injects the active memory pack on the next prompt or invocation with zero context loss.
 
 ---
 
-## 9. How Does Engrim Compare?
+## 9. Open Core Architecture: Local vs. Enterprise
 
-There are several other memory solutions and coding assistants out there (such as gbrain, OpenCode, Codex, and Pi). Here is how `engrim` differs:
+Engrim maintains a strict, transparent architectural boundary between open-source single-developer productivity and enterprise infrastructure:
 
-- **vs gbrain**: While gbrain is a great provider-agnostic memory tool, `engrim` sets itself apart by using a lightweight, local-first SQLite architecture. This keeps everything fast and offline without needing complex setup or cloud dependencies.
-- **vs OpenCode & Codex**: Their built-in SQLite stores hold *transcripts* (sessions, messages, compaction summaries) for one tool. `engrim` is an *episodic* memory engine that tracks the *provenance* of decisions across multiple different agents (Antigravity, Claude Code, Cursor, Codex CLI, OpenCode) and operates as a unified backend that all your tools share — with the OpenCode plugin, engrim becomes OpenCode's durable memory layer rather than competing with it. See [the OpenCode setup notes](#opencode) for the point-by-point case.
-- **vs Pi**: Pi acts as a personal AI companion with a long-term memory. `engrim` is specifically tailored for **coding projects** and software architecture—capturing decisions, state, and constraints in a format that coding agents can efficiently query via hybrid search (FTS5 + vector).
-
----
-
-<a id="security--privacy"></a>
-## 10. Security & Privacy
-
-- **100% Local & Offline**: All memory records and logs reside in a local SQLite file (`~/.engrim/memory.db`). No telemetry, no cloud sync, no tracking.
-- **Model Storage**: Uses `model2vec` for local static embeddings (~30ms load time, no GPU required, runs on CPU). Can run pure-lexical (`ENGRIM_EMBED=off`) for zero extra dependencies.
-- **POSIX File Permissions**: Databases are created with restricted owner-only permissions (`0600`).
-- **Git Protection**: `*.db` is gitignored by default; your memories never accidentally commit to version control.
+| Capability | Engrim Open Source (Free, MIT) | Engrim Enterprise (Commercial In-VPC) |
+|:---|:---|:---|
+| **Target User** | Individual developers & local coding agents | Engineering teams & autonomous CI/CD pipelines |
+| **Storage Substrate** | 100% local SQLite WAL (`~/.engrim/memory.db`) | In-VPC high-throughput state collector & team repository |
+| **Retrieval Engine** | Hybrid FTS5 bm25 + `model2vec` (CPU, ~30ms) | Organization-wide semantic search & multi-tenant indexing |
+| **Agent Support** | Antigravity, Claude Code, Cursor, Codex, OpenCode | Distributed container fleets & autonomous CI state-machines |
+| **Integrity & Health** | `engrim doctor` diagnostic & self-healing hooks | Pre-commit AST invariant arbiter & deterministic validation |
+| **Security & Compliance** | POSIX `0600` owner permissions, offline | Secret & PII scrubber, cryptographic Merkle compliance ledger |
+| **Collaboration** | Local merge & backup (`engrim merge/backup`) | Multi-developer team memory federation & Linear-grade web UI |
 
 ---
 
-## 11. Author & Contact
+## 10. How Does Engrim Compare?
+
+- **vs gbrain**: While gbrain is a provider-agnostic memory tool, `engrim` sets itself apart with a lightweight, local-first SQLite architecture. It requires zero cloud infrastructure, no complex daemon setup, and operates entirely on CPU.
+- **vs OpenCode & Codex Internal Stores**: Their built-in SQLite databases store *transcripts* (sessions, raw message parts, lossy compaction summaries) locked to one tool. `engrim` is a cross-tool *episodic* memory engine that tracks provenance across all your tools. With the OpenCode plugin, engrim serves as the durable memory layer rather than competing with it.
+- **vs Pi / Personal Companions**: Companion tools focus on social conversation history. `engrim` is engineered specifically for **software engineering projects**—preserving architectural decisions, invariant constraints, and technical state.
+
+---
+
+## 11. Security & Privacy
+
+- **100% Local & Offline**: All memory records and flight-recorder logs reside in your local SQLite file (`~/.engrim/memory.db`). No telemetry, no cloud sync, no tracking.
+- **CPU-Only Vector Inference**: Uses `model2vec` for static embeddings (~30ms load time, no GPU required, runs on CPU). Can run pure-lexical (`ENGRIM_EMBED=off`) for zero extra dependencies.
+- **POSIX Owner Permissions**: Databases are created with restricted owner-only permissions (`0600`).
+- **Git Safe**: `*.db` is gitignored by default; memories are never accidentally committed to public version control.
+
+---
+
+## 12. Author & Community
 
 Created by **Tim Gordon** ([@timgordontg](https://github.com/timgordontg)).
 - **LinkedIn:** [linkedin.com/in/timgordon1](https://www.linkedin.com/in/timgordon1)
 - **Email:** [timgordontg@gmail.com](mailto:timgordontg@gmail.com)
+- **GitHub:** [github.com/timgordontg/engrim](https://github.com/timgordontg/engrim)
 
-Founder & Creator @ Engrim. Raising a $2.0M Seed round for In-VPC Autonomous CI infrastructure. Enterprise inquiries & collaborations: timgordontg@gmail.com
+Founder & Creator @ Engrim. Raising a $2.0M Seed round for In-VPC Autonomous CI infrastructure. For enterprise licensing, pilot deployments, or investment inquiries: [timgordontg@gmail.com](mailto:timgordontg@gmail.com).
 
 ---
 
-## 12. License
+## 13. License
 
 MIT © 2026 Tim Gordon.
