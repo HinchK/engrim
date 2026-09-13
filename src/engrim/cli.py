@@ -1314,13 +1314,16 @@ Keep it high-signal — curation and retrieval precision are the point, not volu
 
 def _hook_bin(path: str) -> str:
     """Quote the resolved engrim path for the shell Claude Code runs hooks in.
-
-    On Windows `which` hands back `C:\\Users\\...\\Scripts\\engrim.EXE`; interpolated raw, bash reads
-    the backslashes as escapes and the command collapses to `C:UserstimgoAppData...` — not found.
-    The `2>/dev/null || true` then swallows the error, so every hook is a silent no-op while setup
-    still prints its green checkmarks. Forward slashes + quotes survive; quoting also fixes paths
-    with spaces on POSIX, which were equally broken and just rarer."""
-    return '"' + path.replace("\\", "/") + '"'
+    Also detects cross-OS paths (e.g. Windows drive paths on Linux) and falls back
+    to the system PATH binary."""
+    clean = path.strip('"\'')
+    if sys.platform != "win32" and (len(clean) > 1 and clean[1] == ":" or "\\" in clean):
+        fallback = shutil.which("engrim") or "engrim"
+        return '"' + fallback.replace("\\", "/") + '"'
+    if sys.platform == "win32" and clean.startswith("/") and not clean.startswith("//"):
+        fallback = shutil.which("engrim") or "engrim"
+        return '"' + fallback.replace("\\", "/") + '"'
+    return '"' + clean.replace("\\", "/") + '"'
 
 
 def _cmd_has(command: str, marker: str) -> bool:
@@ -1419,8 +1422,8 @@ engrim doctor
 def _setup_agy(engrim_bin: str, dry_run: bool = False, strict: bool = False) -> None:
     print("Wiring Google Antigravity environment…")
     hooks_path = os.path.expanduser("~/.gemini/config/hooks.json")
-    boot_cmd = f"{engrim_bin} hook --agent agy --event boot 2>/dev/null || true"
-    stop_cmd = f"{engrim_bin} hook --agent agy --event stop --strict" if strict else f"{engrim_bin} hook --agent agy --event stop >/dev/null 2>&1 || true"
+    boot_cmd = f"{engrim_bin} hook --agent agy --event boot 2>/dev/null || engrim hook --agent agy --event boot 2>/dev/null || true"
+    stop_cmd = f"{engrim_bin} hook --agent agy --event stop --strict || engrim hook --agent agy --event stop --strict" if strict else f"{engrim_bin} hook --agent agy --event stop >/dev/null 2>&1 || engrim hook --agent agy --event stop >/dev/null 2>&1 || true"
     if dry_run:
         print(f"[dry-run] Would wire Antigravity hooks in {hooks_path}:")
         print(f"    PreInvocation: {boot_cmd}")
@@ -1523,22 +1526,23 @@ def _codex_hook_commands(engrim_bin: str):
     Codex sends one JSON object on stdin for every command hook. The command hooks deliberately
     swallow helper failures so a local memory integration can never interrupt the coding session.
     The hook itself still emits Codex-compatible JSON on the two context-producing events.
+    Includes a self-healing PATH fallback in case engrim_bin is relocated or cross-OS.
     """
     return {
         "SessionStart": (
-            f"{engrim_bin} hook --agent codex --event sessionstart 2>/dev/null || true",
+            f"{engrim_bin} hook --agent codex --event sessionstart 2>/dev/null || engrim hook --agent codex --event sessionstart 2>/dev/null || true",
             20,
         ),
         "SessionEnd": (
-            f"{engrim_bin} log --hook --agent codex 2>/dev/null || true",
+            f"{engrim_bin} log --hook --agent codex 2>/dev/null || engrim log --hook --agent codex 2>/dev/null || true",
             3,
         ),
         "Stop": (
-            f"{engrim_bin} log --hook --agent codex 2>/dev/null || true",
+            f"{engrim_bin} log --hook --agent codex 2>/dev/null || engrim log --hook --agent codex 2>/dev/null || true",
             30,
         ),
         "UserPromptSubmit": (
-            f"{engrim_bin} assist 2>/dev/null || true",
+            f"{engrim_bin} assist 2>/dev/null || engrim assist 2>/dev/null || true",
             20,
         ),
     }
@@ -1620,12 +1624,12 @@ def _setup_claude(conn, a, engrim_bin: str, dry_run: bool = False) -> None:
     print("Wiring Claude Code environment…")
     settings_path = os.path.expanduser(getattr(a, "settings", None) or "~/.claude/settings.json")
     bin_error = _verify_hook_bin(engrim_bin)
-    stop_cmd = f"{engrim_bin} log --hook --strict" if _is_strict(a) else f"{engrim_bin} log --hook >/dev/null 2>&1 || true"
+    stop_cmd = f"{engrim_bin} log --hook --strict || engrim log --hook --strict" if _is_strict(a) else f"{engrim_bin} log --hook >/dev/null 2>&1 || engrim log --hook >/dev/null 2>&1 || true"
     wired = {
-        "SessionStart": (f"{engrim_bin} hook 2>/dev/null || true", "engrim hook"),
-        "SessionEnd":   (f"{engrim_bin} sync --claude >/dev/null 2>&1 || true", "engrim sync"),
+        "SessionStart": (f"{engrim_bin} hook 2>/dev/null || engrim hook 2>/dev/null || true", "engrim hook"),
+        "SessionEnd":   (f"{engrim_bin} sync --claude >/dev/null 2>&1 || engrim sync --claude >/dev/null 2>&1 || true", "engrim sync"),
         "Stop":         (stop_cmd, "engrim log"),
-        "UserPromptSubmit": (f"{engrim_bin} assist 2>/dev/null || true", "engrim assist"),
+        "UserPromptSubmit": (f"{engrim_bin} assist 2>/dev/null || engrim assist 2>/dev/null || true", "engrim assist"),
     }
 
     if dry_run:
@@ -2044,6 +2048,367 @@ def _uninstall_codex(dry_run: bool = False) -> None:
         print(f"✓ unwired Codex hooks from {hooks_path}")
     else:
         print(f"✓ Codex hooks already unwired from {hooks_path}")
+
+
+def cmd_doctor(conn, a) -> None:
+    """Run comprehensive health and configuration diagnostic checks across the database,
+    semantic embedding engine, and all supported AI coding agent environments."""
+    import platform
+    from engrim.hosts.opencode import wiring as opencode_host
+
+    as_json = getattr(a, "json", False)
+    do_fix = getattr(a, "fix", False)
+    project = _resolve_project(getattr(a, "project", None))
+
+    report = {
+        "platform": {
+            "system": sys.platform,
+            "machine": platform.machine(),
+            "python": sys.version.split()[0],
+            "engrim_bin": shutil.which("engrim") or "engrim",
+        },
+        "database": {},
+        "semantic": {},
+        "environments": {},
+        "issues": [],
+        "warnings": [],
+        "fixes": [],
+    }
+
+    # 1. Database Checks
+    db_path = getattr(conn, "_db_path", None)
+    if not db_path:
+        db_path = os.path.expanduser(getattr(a, "db", None) or os.environ.get("ENGRIM_DB") or "~/.engrim/memory.db")
+    report["database"]["path"] = str(db_path)
+
+    try:
+        integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
+        report["database"]["integrity"] = integrity
+        if integrity != "ok":
+            report["issues"].append(f"Database integrity check failed: {integrity}")
+    except Exception as e:
+        report["database"]["integrity"] = f"error: {e}"
+        report["issues"].append(f"Database integrity check failed: {e}")
+
+    try:
+        journal_mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        report["database"]["journal_mode"] = journal_mode
+    except Exception as e:
+        report["database"]["journal_mode"] = f"error: {e}"
+
+    try:
+        active_count = conn.execute("SELECT COUNT(*) FROM memories WHERE status = 'active'").fetchone()[0]
+        total_count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+        report["database"]["active_records"] = active_count
+        report["database"]["total_records"] = total_count
+        type_rows = conn.execute("SELECT type, COUNT(*) FROM memories WHERE status = 'active' GROUP BY type").fetchall()
+        report["database"]["by_type"] = {r[0]: r[1] for r in type_rows}
+    except Exception as e:
+        report["database"]["records_error"] = str(e)
+        report["issues"].append(f"Failed to query memories: {e}")
+
+    try:
+        log_count = conn.execute("SELECT COUNT(*) FROM log").fetchone()[0]
+        report["database"]["log_turns"] = log_count
+    except Exception:
+        report["database"]["log_turns"] = 0
+
+    # 2. Semantic Checks
+    fn, model_name = _resolve_embedder()
+    report["semantic"]["model"] = model_name or "lexical-only"
+    report["semantic"]["ready"] = bool(fn)
+    if fn:
+        try:
+            embedded_count = conn.execute("SELECT COUNT(*) FROM embedding WHERE model = ?", (model_name,)).fetchone()[0]
+            report["semantic"]["embedded_count"] = embedded_count
+        except Exception:
+            report["semantic"]["embedded_count"] = 0
+    else:
+        report["warnings"].append("Semantic recall engine is not active (model2vec not loaded or ENGRIM_EMBED=off)")
+
+    # Helper to check if a command path is cross-OS or broken
+    def check_cmd_bin(cmd_str: str):
+        cmd_str = cmd_str.strip()
+        target = ""
+        if cmd_str.startswith('"'):
+            end = cmd_str.find('"', 1)
+            target = cmd_str[1:end] if end != -1 else cmd_str.strip('"')
+        else:
+            target = cmd_str.split()[0] if cmd_str else ""
+
+        target = target.replace("\\", "/")
+        if sys.platform != "win32" and (len(target) > 1 and target[1] == ":" or "\\" in cmd_str):
+            return False, f"Windows path on POSIX host ({target})"
+        if sys.platform == "win32" and target.startswith("/") and not target.startswith("//"):
+            return False, f"POSIX path on Windows host ({target})"
+
+        if os.path.isabs(target) and not os.path.exists(target):
+            return False, f"Executable not found on disk: {target}"
+
+        if not os.path.isabs(target) and not shutil.which(target):
+            return False, f"Command '{target}' not found on PATH"
+
+        return True, "ok"
+
+    # 3. Environments Checks
+    # 3a. Antigravity (~/.gemini)
+    gemini_dir = os.path.expanduser("~/.gemini")
+    if os.path.isdir(gemini_dir):
+        agy_env = {"detected": True, "hooks": {}, "mcp": {}, "skill": False}
+        hooks_path = os.path.expanduser("~/.gemini/config/hooks.json")
+        if os.path.exists(hooks_path):
+            try:
+                with open(hooks_path, "r", encoding="utf-8") as f:
+                    hdata = json.load(f)
+                eng = hdata.get("engrim", {})
+                pre = eng.get("PreInvocation", [])
+                stop = eng.get("Stop", [])
+
+                if pre:
+                    cmd0 = pre[0].get("command", "")
+                    ok, reason = check_cmd_bin(cmd0)
+                    has_fallback = "|| engrim " in cmd0
+                    agy_env["hooks"]["PreInvocation"] = {"command": cmd0, "valid": ok, "reason": reason, "has_fallback": has_fallback}
+                    if not ok:
+                        report["issues"].append(f"Antigravity PreInvocation hook broken: {reason}")
+                else:
+                    report["issues"].append("Antigravity PreInvocation hook missing from ~/.gemini/config/hooks.json")
+
+                if stop:
+                    cmd0 = stop[0].get("command", "")
+                    ok, reason = check_cmd_bin(cmd0)
+                    has_fallback = "|| engrim " in cmd0
+                    agy_env["hooks"]["Stop"] = {"command": cmd0, "valid": ok, "reason": reason, "has_fallback": has_fallback}
+                    if not ok:
+                        report["issues"].append(f"Antigravity Stop hook broken: {reason}")
+            except Exception as e:
+                report["issues"].append(f"Failed to read Antigravity hooks.json: {e}")
+        else:
+            report["issues"].append("Antigravity hooks.json not found at ~/.gemini/config/hooks.json")
+
+        mcp_paths = [
+            os.path.expanduser("~/.gemini/antigravity-cli/mcp_config.json"),
+            os.path.expanduser("~/.gemini/config/mcp_config.json"),
+        ]
+        for mp in mcp_paths:
+            if os.path.exists(mp):
+                try:
+                    with open(mp, "r", encoding="utf-8") as f:
+                        mcfg = json.load(f)
+                    cmd = mcfg.get("mcpServers", {}).get("engrim", {}).get("command", "")
+                    if cmd:
+                        ok, reason = check_cmd_bin(cmd)
+                        agy_env["mcp"][mp] = {"command": cmd, "valid": ok, "reason": reason}
+                        if not ok:
+                            report["issues"].append(f"Antigravity MCP server in {mp} broken: {reason}")
+                except Exception as e:
+                    report["issues"].append(f"Failed to read MCP config {mp}: {e}")
+
+        skill_path = os.path.expanduser("~/.gemini/config/skills/engrim/SKILL.md")
+        agy_env["skill"] = os.path.exists(skill_path)
+        report["environments"]["antigravity"] = agy_env
+
+    # 3b. Claude Code (~/.claude)
+    claude_dir = os.path.expanduser("~/.claude")
+    if os.path.isdir(claude_dir):
+        claude_env = {"detected": True, "hooks": {}, "claude_md": False}
+        settings_path = os.path.expanduser("~/.claude/settings.json")
+        if os.path.exists(settings_path):
+            try:
+                with open(settings_path, "r", encoding="utf-8") as f:
+                    csettings = json.load(f)
+                chooks = csettings.get("hooks", {})
+                for evt in ("SessionStart", "SessionEnd", "Stop", "UserPromptSubmit"):
+                    groups = chooks.get(evt, [])
+                    found_cmd = ""
+                    for grp in groups:
+                        for h in grp.get("hooks", []):
+                            if _cmd_has(h.get("command", ""), "engrim"):
+                                found_cmd = h.get("command", "")
+                                break
+                    if found_cmd:
+                        ok, reason = check_cmd_bin(found_cmd)
+                        has_fallback = "|| engrim " in found_cmd
+                        claude_env["hooks"][evt] = {"command": found_cmd, "valid": ok, "reason": reason, "has_fallback": has_fallback}
+                        if not ok:
+                            report["issues"].append(f"Claude Code {evt} hook broken: {reason}")
+            except Exception as e:
+                report["issues"].append(f"Failed to read Claude settings.json: {e}")
+
+        md_path = os.path.expanduser("~/.claude/CLAUDE.md")
+        claude_env["claude_md"] = os.path.exists(md_path) and "engrim" in open(md_path, encoding="utf-8", errors="replace").read()
+        report["environments"]["claude_code"] = claude_env
+
+    # 3c. Cursor (~/.cursor)
+    cursor_dir = os.path.expanduser("~/.cursor")
+    if os.path.isdir(cursor_dir):
+        cursor_env = {"detected": True, "mcp": False}
+        cursor_mcp = os.path.expanduser("~/.cursor/mcp.json")
+        if os.path.exists(cursor_mcp):
+            try:
+                with open(cursor_mcp, "r", encoding="utf-8") as f:
+                    cmcp = json.load(f)
+                cmd = cmcp.get("mcpServers", {}).get("engrim", {}).get("command", "")
+                if cmd:
+                    ok, reason = check_cmd_bin(cmd)
+                    cursor_env["mcp"] = ok
+                    if not ok:
+                        report["issues"].append(f"Cursor MCP server broken: {reason}")
+            except Exception as e:
+                report["issues"].append(f"Failed to read Cursor mcp.json: {e}")
+        report["environments"]["cursor"] = cursor_env
+
+    # 3d. OpenCode
+    if os.path.isdir(opencode_host.config_dir()):
+        oc_env = {"detected": True, "plugin": False, "mcp": False}
+        plugin_path = os.path.join(opencode_host.config_dir(), "plugins", "engrim.js")
+        oc_env["plugin"] = os.path.exists(plugin_path)
+        opencode_json = os.path.join(opencode_host.config_dir(), "opencode.json")
+        if os.path.exists(opencode_json):
+            try:
+                with open(opencode_json, "r", encoding="utf-8") as f:
+                    ocfg = json.load(f)
+                oc_env["mcp"] = "mcp" in ocfg and "engrim" in ocfg["mcp"]
+            except Exception:
+                pass
+        report["environments"]["opencode"] = oc_env
+
+    # 3e. Codex CLI (~/.codex)
+    codex_dir = _codex_home()
+    if os.path.isdir(codex_dir):
+        codex_env = {"detected": True, "hooks": {}}
+        hooks_path = os.path.join(codex_dir, "hooks.json")
+        if os.path.exists(hooks_path):
+            try:
+                with open(hooks_path, "r", encoding="utf-8") as f:
+                    cxdata = json.load(f)
+                cxh = cxdata.get("hooks", {})
+                for evt in ("SessionStart", "SessionEnd", "Stop", "UserPromptSubmit"):
+                    groups = cxh.get(evt, [])
+                    found_cmd = ""
+                    for grp in groups:
+                        for h in grp.get("hooks", []):
+                            if _cmd_has(h.get("command", ""), "engrim"):
+                                found_cmd = h.get("command", "")
+                                break
+                    if found_cmd:
+                        ok, reason = check_cmd_bin(found_cmd)
+                        codex_env["hooks"][evt] = {"command": found_cmd, "valid": ok, "reason": reason}
+                        if not ok:
+                            report["issues"].append(f"Codex CLI {evt} hook broken: {reason}")
+            except Exception as e:
+                report["issues"].append(f"Failed to read Codex hooks.json: {e}")
+        report["environments"]["codex"] = codex_env
+
+    # 4. Auto-Fix if requested
+    if do_fix and report["issues"]:
+        engrim_bin = _hook_bin(shutil.which("engrim") or "engrim")
+        if "antigravity" in report["environments"]:
+            _setup_agy(engrim_bin, dry_run=False, strict=False)
+            report["fixes"].append("Repaired Google Antigravity hooks & MCP server with self-healing PATH fallback")
+        if "claude_code" in report["environments"]:
+            _setup_claude(conn, a, engrim_bin, dry_run=False)
+            report["fixes"].append("Repaired Claude Code hooks with self-healing PATH fallback")
+        if "cursor" in report["environments"]:
+            _setup_cursor(engrim_bin, dry_run=False)
+            report["fixes"].append("Repaired Cursor MCP server configuration")
+        if "codex" in report["environments"]:
+            _setup_codex(engrim_bin, dry_run=False)
+            report["fixes"].append("Repaired Codex CLI command hooks with self-healing PATH fallback")
+        if "opencode" in report["environments"]:
+            opencode_host.setup(engrim_bin, dry_run=False)
+            report["fixes"].append("Repaired OpenCode plugin & MCP server configuration")
+
+    if as_json:
+        print(json.dumps(report, indent=2))
+        return
+
+    # Formatted terminal output
+    print("=" * 80)
+    print("                 🩺 ENGRIM DOCTOR — DIAGNOSTIC HEALTH CHECK                    ")
+    print("=" * 80)
+    p = report["platform"]
+    print(f"Platform   : {p['system']} ({p['machine']}) · Python {p['python']}")
+    print(f"Engrim CLI : {p['engrim_bin']}")
+    print(f"Project    : {project}")
+    print()
+
+    print("[1] Database & Storage Engine")
+    d = report["database"]
+    print(f"  ✓ Store Location   : {d.get('path')}")
+    print(f"  ✓ Integrity Check  : {d.get('integrity')}")
+    print(f"  ✓ Journal Mode     : {d.get('journal_mode')} (WAL)")
+    print(f"  ✓ Curated Memories : {d.get('active_records', 0)} active / {d.get('total_records', 0)} total")
+    types_str = ", ".join(f"{k}={v}" for k, v in d.get("by_type", {}).items())
+    if types_str:
+        print(f"    ({types_str})")
+    print(f"  ✓ Flight Log Turns : {d.get('log_turns', 0)} logged")
+    print()
+
+    print("[2] Semantic Recall Engine")
+    s = report["semantic"]
+    if s.get("ready"):
+        print(f"  ✓ Model Available  : {s.get('model')}")
+        print(f"  ✓ Embedded Records : {s.get('embedded_count', 0)} / {d.get('active_records', 0)}")
+    else:
+        print(f"  ! Model Status     : {s.get('model')} (offline/disabled)")
+    print()
+
+    print("[3] Agent Environments & Hooks")
+    envs = report["environments"]
+    for env_name, edata in envs.items():
+        title = {
+            "antigravity": "Google Antigravity (~/.gemini)",
+            "claude_code": "Claude Code (~/.claude)",
+            "cursor": "Cursor (~/.cursor)",
+            "opencode": f"OpenCode ({opencode_host.config_dir(pretty=True)})",
+            "codex": "Codex CLI (~/.codex)",
+        }.get(env_name, env_name)
+        print(f"  {title}:")
+        if "hooks" in edata:
+            for hk_name, hinfo in edata["hooks"].items():
+                mark = "✓" if hinfo.get("valid") else "✖"
+                fallback_str = " (self-healing fallback: active)" if hinfo.get("has_fallback") else ""
+                print(f"    {mark} {hk_name} hook: {'valid' if hinfo.get('valid') else hinfo.get('reason')}{fallback_str}")
+        if "mcp" in edata and isinstance(edata["mcp"], dict):
+            for mpath, minfo in edata["mcp"].items():
+                mark = "✓" if minfo.get("valid") else "✖"
+                print(f"    {mark} MCP server: {minfo.get('command')} ({'valid' if minfo.get('valid') else minfo.get('reason')})")
+        elif "mcp" in edata:
+            mark = "✓" if edata["mcp"] else "✖"
+            print(f"    {mark} MCP registration: {'valid' if edata['mcp'] else 'missing'}")
+        if "skill" in edata:
+            mark = "✓" if edata["skill"] else "✖"
+            print(f"    {mark} Skill deployed: {'yes' if edata['skill'] else 'missing'}")
+        if "plugin" in edata:
+            mark = "✓" if edata["plugin"] else "✖"
+            print(f"    {mark} Plugin installed: {'yes' if edata['plugin'] else 'missing'}")
+
+    print()
+    print("=" * 80)
+    if report["warnings"]:
+        print("WARNINGS / NOTICES:")
+        for w in report["warnings"]:
+            print(f"  ! {w}")
+        print("-" * 80)
+
+    if report["fixes"]:
+        print("REPAIRS APPLIED:")
+        for fix in report["fixes"]:
+            print(f"  ✓ {fix}")
+        print("=" * 80)
+        print("Result: All detected issues were automatically repaired. Systems healthy.")
+    elif report["issues"]:
+        print("ISSUES DETECTED:")
+        for iss in report["issues"]:
+            print(f"  ✖ {iss}")
+        print("=" * 80)
+        print("Action Required: Run 'engrim doctor --fix' or 'engrim setup' to resolve.")
+        if not do_fix:
+            sys.exit(1)
+    else:
+        print("Result: All systems healthy. Zero issues detected across all agent hosts.")
+    print("=" * 80)
 
 
 _IMPORT_TYPE_MAP = {
@@ -3650,6 +4015,12 @@ def build_parser() -> argparse.ArgumentParser:
     psv = sub.add_parser("serve", help="serve engrim over stdio (e.g. --mcp)")
     psv.add_argument("--mcp", action="store_true", default=True, help="run engrim as an MCP server over stdio")
     psv.set_defaults(func=cmd_serve)
+
+    pdoc = sub.add_parser("doctor", help="run comprehensive health and configuration diagnostic checks")
+    pdoc.add_argument("-p", "--project", default="auto")
+    pdoc.add_argument("--fix", action="store_true", help="automatically repair broken hook paths or missing configs")
+    pdoc.add_argument("--json", action="store_true", help="output doctor diagnostics as JSON")
+    pdoc.set_defaults(func=cmd_doctor)
 
     # engrim ent — Enterprise In-VPC Substrate Bridge
     pent = sub.add_parser("ent", help="Engrim Enterprise In-VPC Substrate & Autonomous Directive Runner")

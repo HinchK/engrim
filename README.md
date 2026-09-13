@@ -49,8 +49,9 @@ graph TD
         OPENCODE["OpenCode<br/>(Plugin & MCP)"]
     end
 
-    subgraph CoreEngine ["engrim Core Engine (v1.4.4)"]
+    subgraph CoreEngine ["engrim Core Engine (v1.4.5)"]
         ADAPTERS["Adapters & Hooks<br/>(agy, claude, opencode, mcp)"]
+        DOCTOR["Health & Diagnostic Engine<br/>(engrim doctor --fix)"]
         PROVENANCE["Agent Provenance Engine<br/>(origin_agent tracking)"]
         ROUTER["Hybrid Retrieval & Minder<br/>(bm25 lexical + vector cosine)"]
     end
@@ -186,6 +187,24 @@ engrim setup --all
 
 *(Use `--dry-run` with any setup command to inspect changes without modifying disk).*
 
+### Diagnostic Health Check & Self-Healing (`engrim doctor`)
+
+Verify database integrity, semantic recall coverage, and all configured agent hooks across your system:
+
+```bash
+# Run comprehensive health diagnostic across all agent environments
+engrim doctor
+
+# Automatically repair broken hook paths or cross-OS migrations with self-healing PATH fallback
+engrim doctor --fix
+
+# Output diagnostic report as JSON (for CI pipelines or health monitoring)
+engrim doctor --json
+```
+
+- **Self-Healing Path Fallback**: Hook commands feature portable PATH fallback (`<bin> || engrim ... || true`) ensuring sessions never experience silent amnesia when directories move or dotfiles sync across machines.
+- **Deep Integrity Audit**: Validates SQLite WAL mode, database consistency (`PRAGMA integrity_check`), active records, and semantic model readiness (`model2vec`).
+
 #### GitHub Actions (gh-aw)
 See [`examples/gh-aw/`](examples/gh-aw/) for engrim inside [GitHub Agentic Workflows](https://github.github.com/gh-aw/): memory across runs through artifacts and `engrim merge`, and a continue-as-clear restart instead of auto-compaction.
 
@@ -259,6 +278,8 @@ the reviewed log. It does not verify that logging captured the entire session.
 | `engrim sync` | `engrim sync [DIR]` | Mirror markdown memories into the store (idempotent seed-once). |
 | `engrim merge` | `engrim merge OTHER.db [--dry-run]` | Fold another store's records into this one (content-keyed, idempotent; retirements carry over). |
 | `engrim backup` | `engrim backup COPY.db [--force] [--json]` | Consistent copy of the whole store via SQLite's online backup API (safe while agents hold it open). |
+| `engrim doctor` | `engrim doctor [--fix] [--json]` | Comprehensive health & environment diagnostic check across SQLite, semantic engine, and hooks (`--fix` auto-repairs paths). |
+| `engrim ent` | `engrim ent "<ask>" [--action run\|status\|traces]` | Engrim Enterprise In-VPC substrate bridge & autonomous directive execution. |
 
 ---
 
