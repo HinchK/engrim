@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/timgordontg/engrim/actions/workflows/ci.yml/badge.svg)](https://github.com/timgordontg/engrim/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/engrim?color=blue)](https://pypi.org/project/engrim/)
+[![Website](https://img.shields.io/badge/website-engrim.dev-blue)](https://engrim.dev)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Local & Private](https://img.shields.io/badge/local-%26%20private-brightgreen)](#security-privacy)
@@ -389,6 +390,7 @@ Engrim maintains a strict, transparent architectural boundary between open-sourc
 
 **Engrim** was created by **Tim Gordon** ([@timgordontg](https://github.com/timgordontg)).
 
+- **Website:** [engrim.dev](https://engrim.dev)
 - **GitHub:** [github.com/timgordontg/engrim](https://github.com/timgordontg/engrim)
 - **LinkedIn:** [linkedin.com/in/timgordon1](https://www.linkedin.com/in/timgordon1)
 - **Email:** [timgordontg@gmail.com](mailto:timgordontg@gmail.com)
