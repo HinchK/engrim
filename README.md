@@ -4,7 +4,7 @@
 [![PyPI](https://img.shields.io/pypi/v/engrim?color=blue)](https://pypi.org/project/engrim/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Local & Private](https://img.shields.io/badge/local-%26%20private-brightgreen)](#11-security--privacy)
+[![Local & Private](https://img.shields.io/badge/local-%26%20private-brightgreen)](#security-privacy)
 [![Glama MCP](https://glama.ai/mcp/servers/timgordontg/engrim/badges/score.svg)](https://glama.ai/mcp/servers/timgordontg/engrim)
 
 **The Universal Cross-Model & Cross-Agent Episodic Memory Standard.**
@@ -13,16 +13,34 @@ A local-first, project-scoped SQLite memory engine that allows developers to fre
 
 ---
 
-## 1. The Core Value Proposition
+## 1. Overview & Core Value Proposition
 
 > **"Why pay for 200,000 tokens of forgotten noise on every turn? The models are disposable utilities; your project's decisions are not."**
 
-As context windows scale to 1M+ tokens, developers face **attention dilution**: reasoning degrades, token cost multiplies with every conversational turn, and clearing context causes total amnesia.
+**Engrim** is the universal, cross-model episodic memory standard engineered specifically for autonomous AI coding agents and heavy software development.
 
-`engrim` replaces attention dilution with **4,000 characters of curated episodic working memory**:
-- **Switzerland of AI Memory**: Decouples project intelligence from any single AI vendor or proprietary cloud silo. Switch from Gemini 3.8 in Antigravity to Claude 3.7 Sonnet in Claude Code to Codex CLI mid-project — your agents pick up right where the others left off.
-- **Save Button for Autonomous Coding**: Externalize decisions, constraints, and state as you work. Connected agents write to memory via MCP tools (`engrim_add`) or lifecycle hooks when they make architectural decisions. Clear your agent session freely (`/clear`) and watch context reload intact.
-- **Precision, Hot Context Loading**: Combines SQLite FTS5 (`bm25` keyword search) with static vector embeddings (`model2vec`) in a zero-latency hybrid reciprocal-rank fusion engine. 100% local, runs on CPU in ~30ms, with zero cloud dependency.
+It solves the **"200,000-token context window trap"**—where coding models suffer from severe attention dilution, sky-high per-turn token costs, and total amnesia whenever a session is cleared—by replacing raw transcript replay with **4,000 characters of high-precision, curated episodic working memory** stored in a single, local-first SQLite file (`~/.engrim/memory.db`).
+
+### Why Developers Need Engrim
+
+When developing complex codebases with modern AI agent harnesses, developers inevitably encounter three systemic bottlenecks:
+
+1. **Context Window Inflation & Attention Dilution**: Shoveling 100,000+ tokens of raw conversational history into an LLM on every turn degrades reasoning accuracy, spikes latency, and causes models to hallucinate away critical architectural invariants.
+2. **The Amnesia Trap (`/clear`)**: The moment you clear context to restore model sharpness, your agent's knowledge resets to zero. You waste valuable time re-explaining system architecture, test rules, and constraints.
+3. **Vendor & Harness Silos**: Decisions made while pairing with Claude Code are completely invisible when switching to Google Antigravity, Cursor, or Codex CLI. Project intelligence remains trapped in proprietary cloud silos.
+
+Engrim eliminates this fragmentation by acting as the **Switzerland of AI Memory**: a vendor-neutral, local SQLite substrate that loads the exact slice of memory your agent needs, right when it needs it.
+
+---
+
+### Key Capabilities at a Glance
+
+- 🌐 **Cross-Harness Interoperability**: Seamlessly share memory across Google Antigravity, Claude Code, Cursor, Codex CLI, OpenCode, and Windsurf on the exact same project repository.
+- ⚡ **Sub-1% Context Footprint**: Boots every turn with ~4,000 characters (<1,000 tokens) of priority-ordered active memory, cutting context reloading costs by 99%+.
+- 🔄 **Continue-As-Clear Workflow**: Clear your agent session freely (`/clear`) anytime context drifts. The next turn instantly reloads active decisions, state, and your `[▶ RESUME HERE]` pointer.
+- 🧠 **Zero-Latency Hybrid Retrieval**: Blends SQLite FTS5 (`bm25` keyword search) with static vector embeddings (`model2vec`) on CPU in ~30ms—zero cloud dependencies or GPU requirements.
+- 🩺 **Self-Healing Diagnostics (`engrim doctor`)**: Built-in health audit engine verifies database WAL integrity, semantic vector coverage, and agent hooks with portable PATH fallbacks.
+- 🔒 **100% Local, Offline & Private**: Zero telemetry, zero cloud sync, POSIX `0600` restricted permissions. Your code and architectural decisions never leave your machine.
 
 ---
 
@@ -49,7 +67,7 @@ In production testing on an active algorithmic trading codebase running real cap
 
 ---
 
-## 3. How It Works (The 10-Second Mental Model)
+## 3. Architecture & How It Works (The 10-Second Mental Model)
 
 ```mermaid
 graph TD
@@ -357,6 +375,7 @@ Engrim maintains a strict, transparent architectural boundary between open-sourc
 
 ---
 
+<a id="security-privacy"></a>
 ## 11. Security & Privacy
 
 - **100% Local & Offline**: All memory records and flight-recorder logs reside in your local SQLite file (`~/.engrim/memory.db`). No telemetry, no cloud sync, no tracking.
@@ -366,14 +385,18 @@ Engrim maintains a strict, transparent architectural boundary between open-sourc
 
 ---
 
-## 12. Author & Community
+## 12. About the Project & Author
 
-Created by **Tim Gordon** ([@timgordontg](https://github.com/timgordontg)).
+**Engrim** was created by **Tim Gordon** ([@timgordontg](https://github.com/timgordontg)).
+
+- **GitHub:** [github.com/timgordontg/engrim](https://github.com/timgordontg/engrim)
 - **LinkedIn:** [linkedin.com/in/timgordon1](https://www.linkedin.com/in/timgordon1)
 - **Email:** [timgordontg@gmail.com](mailto:timgordontg@gmail.com)
-- **GitHub:** [github.com/timgordontg/engrim](https://github.com/timgordontg/engrim)
 
-Founder & Creator @ Engrim. Raising a $2.0M Seed round for In-VPC Autonomous CI infrastructure. For enterprise licensing, pilot deployments, or investment inquiries: [timgordontg@gmail.com](mailto:timgordontg@gmail.com).
+### Origin & Vision
+Engrim was born out of intensive production engineering on a 50,000-line algorithmic trading system running real capital. In high-stakes coding environments where an agent session may run across hundreds of turns and dozens of model context wipes, context amnesia and token dilution are existential risks. Engrim was built to establish the definitive open-source standard for agent episodic memory—giving developers complete freedom from vendor lock-in.
+
+Tim is currently raising a **$2.0M Seed round** for Engrim's In-VPC Autonomous CI infrastructure. For enterprise licensing, pilot deployments, or investment inquiries, reach out at [timgordontg@gmail.com](mailto:timgordontg@gmail.com).
 
 ---
 
