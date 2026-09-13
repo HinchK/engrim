@@ -49,7 +49,7 @@ graph TD
         OPENCODE["OpenCode<br/>(Plugin & MCP)"]
     end
 
-    subgraph CoreEngine ["engrim Core Engine (v1.4.3)"]
+    subgraph CoreEngine ["engrim Core Engine (v1.4.4)"]
         ADAPTERS["Adapters & Hooks<br/>(agy, claude, opencode, mcp)"]
         PROVENANCE["Agent Provenance Engine<br/>(origin_agent tracking)"]
         ROUTER["Hybrid Retrieval & Minder<br/>(bm25 lexical + vector cosine)"]
