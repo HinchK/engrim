@@ -19,14 +19,14 @@ A local-first, project-scoped SQLite memory engine that allows developers to fre
 
 **Engrim** is the universal, cross-model episodic memory standard engineered specifically for autonomous AI coding agents and heavy software development.
 
-It solves the **"200,000-token context window trap"**—where coding models suffer from severe attention dilution, sky-high per-turn token costs, and total amnesia whenever a session is cleared—by replacing raw transcript replay with **4,000 characters of high-precision, curated episodic working memory** stored in a single, local-first SQLite file (`~/.engrim/memory.db`).
+It solves the **"200,000-token context window trap"**—where coding models suffer from severe attention dilution, compounding per-turn token costs, and the loss of prior architectural decisions whenever a chat session is cleared—by replacing raw transcript replay with **4,000 characters of high-precision, curated episodic working memory** stored in a single, local-first SQLite file (`~/.engrim/memory.db`).
 
 ### Why Developers Need Engrim
 
 When developing complex codebases with modern AI agent harnesses, developers inevitably encounter three systemic bottlenecks:
 
 1. **Context Window Inflation & Attention Dilution**: Shoveling 100,000+ tokens of raw conversational history into an LLM on every turn degrades reasoning accuracy, spikes latency, and causes models to hallucinate away critical architectural invariants.
-2. **The Amnesia Trap (`/clear`)**: The moment you clear context to restore model sharpness, your agent's knowledge resets to zero. You waste valuable time re-explaining system architecture, test rules, and constraints.
+2. **The Context Reset Bottleneck (`/clear`)**: The moment you clear context to restore model sharpness, your agent's working knowledge resets to zero. You waste valuable time re-explaining system architecture, test rules, and constraints.
 3. **Vendor & Harness Silos**: Decisions made while pairing with Claude Code are completely invisible when switching to Google Antigravity, Cursor, or Codex CLI. Project intelligence remains trapped in proprietary cloud silos.
 
 Engrim eliminates this fragmentation by acting as the **Switzerland of AI Memory**: a vendor-neutral, local SQLite substrate that loads the exact slice of memory your agent needs, right when it needs it.
@@ -46,10 +46,10 @@ Engrim eliminates this fragmentation by acting as the **Switzerland of AI Memory
 
 ### The Problem vs. The Engrim Standard
 
-| Challenge | Without Engrim (Token Bleed & Amnesia) | With Engrim (Episodic Continuity) |
+| Challenge | Without Engrim (Token Bloat & Context Resets) | With Engrim (Episodic Continuity) |
 |:---|:---|:---|
 | **Context Window** | **Attention Dilution**: 150k+ tokens re-sent on every turn; models lose reasoning sharpness and hallucinate past constraints. | **Precision Working Memory**: ~4,000 chars (<1,000 tokens, <1% of context) injected at boot. Zero attention dilution. |
-| **Session Clearing** | **Total Amnesia on `/clear`**: Clearing chat wipes agent state to zero; you spend minutes re-explaining rules and architecture. | **Continue-As-Clear**: Clear anytime (`/clear`). Decisions, active state, and `[▶ RESUME HERE]` reload instantly. |
+| **Session Clearing** | **Context Reset on `/clear`**: Clearing chat wipes agent context to zero; you spend minutes re-explaining rules and architecture. | **Continue-As-Clear**: Clear anytime (`/clear`). Decisions, active state, and `[▶ RESUME HERE]` reload instantly. |
 | **Agent Ecosystem** | **Vendor Silos**: Decisions made in Claude Code are invisible in Antigravity, Cursor, Codex, or OpenCode. | **Universal Substrate**: One local SQLite store (`~/.engrim/memory.db`) shared across all 5 major harnesses. |
 | **Hook Reliability** | **Silent Failures**: Moving across machines or OSes silently breaks hardcoded binary paths with no error message. | **Self-Healing Diagnostics**: `engrim doctor --fix` verifies all hooks and installs portable PATH fallbacks. |
 | **Data Privacy** | **SaaS Cloud Leakage**: Proprietary code and architectural constraints sent to third-party memory APIs. | **100% Local & Private**: Stored locally in SQLite WAL mode (POSIX `0600`). No telemetry, no cloud sync, no tracking. |
@@ -58,7 +58,7 @@ Engrim eliminates this fragmentation by acting as the **Switzerland of AI Memory
 
 ## 2. Empirical Proof (The 105-Session Case Study)
 
-> **Tested across 105 continuous sessions on a 50,000-line algorithmic trading system. Zero regressions across 186 unit tests, zero context amnesia across model switches.**
+> **Tested across 105 continuous sessions on a 50,000-line algorithmic trading system. Zero regressions across 186 unit tests, zero context loss across model switches.**
 
 In production testing on an active algorithmic trading codebase running real capital:
 - Over **153,000 tokens of work** across days of architecture, parameter tuning, and debugging was consolidated into an active memory pack under **1,000 tokens** (<1% of the context window).
@@ -190,7 +190,7 @@ Result: All systems healthy. Zero issues detected across all agent hosts.
 ================================================================================
 ```
 
-- **Self-Healing Path Fallback**: Hook commands feature portable PATH fallback (`<bin> || engrim ... || true`) ensuring sessions never experience silent amnesia when directories move or dotfiles sync across machines.
+- **Self-Healing Path Fallback**: Hook commands feature portable PATH fallback (`<bin> || engrim ... || true`) ensuring sessions never experience silent hook failures when directories move or dotfiles sync across machines.
 - **Deep Integrity Audit**: Validates SQLite WAL mode, database consistency (`PRAGMA integrity_check`), active records, and semantic model readiness (`model2vec`).
 
 ---
@@ -394,7 +394,7 @@ Engrim maintains a strict, transparent architectural boundary between open-sourc
 - **Email:** [timgordontg@gmail.com](mailto:timgordontg@gmail.com)
 
 ### Origin & Vision
-Engrim was born out of intensive production engineering on a 50,000-line algorithmic trading system running real capital. In high-stakes coding environments where an agent session may run across hundreds of turns and dozens of model context wipes, context amnesia and token dilution are existential risks. Engrim was built to establish the definitive open-source standard for agent episodic memory—giving developers complete freedom from vendor lock-in.
+Engrim was born out of intensive production engineering on a 50,000-line algorithmic trading system running real capital. In high-stakes coding environments where an agent session may run across hundreds of turns and dozens of model context wipes, context loss and attention dilution degrade reasoning and waste tokens. Engrim was built to establish the definitive open-source standard for agent episodic memory—giving developers complete freedom from vendor lock-in.
 
 Tim is currently raising a **$2.0M Seed round** for Engrim's In-VPC Autonomous CI infrastructure. For enterprise licensing, pilot deployments, or investment inquiries, reach out at [timgordontg@gmail.com](mailto:timgordontg@gmail.com).
 
