@@ -1,7 +1,7 @@
 """Zero-dependency MCP (Model Context Protocol) server for engrim.
 
 Exposes engrim's project memory to any MCP client (Antigravity, Cursor, Claude Code, etc.)
-over the MCP stdio transport — newline-delimited JSON-RPC 2.0 — with no dependency beyond
+over the MCP stdio transport - newline-delimited JSON-RPC 2.0 - with no dependency beyond
 engrim's core. Launched via `engrim serve --mcp` (or `engrim mcp`). Each tool reuses the
 exact recall / boot-pack / write logic the CLI uses, so memory behaves identically
 however it's reached.
@@ -233,7 +233,7 @@ def _tool_review(conn, args: dict) -> str:
             "safe_to_clear": None,
             "uncaptured_count": 0,
             "uncaptured": [],
-            "message": "no transcript log yet — insufficient evidence to assess whether it is safe to clear.",
+            "message": "no transcript log yet - insufficient evidence to assess whether it is safe to clear.",
         }, indent=2)
 
     floor = _capture_floor(conn, project)
@@ -280,7 +280,7 @@ def _tool_review(conn, args: dict) -> str:
         "safe_to_clear": len(uncaptured) == 0,
         "uncaptured_count": len(uncaptured),
         "uncaptured": uncaptured,
-        "message": "recent decisions appear captured — safe to clear." if not uncaptured else f"{len(uncaptured)} uncaptured decision(s) detected — capture before clearing",
+        "message": "recent decisions appear captured - safe to clear." if not uncaptured else f"{len(uncaptured)} uncaptured decision(s) detected - capture before clearing",
     }, indent=2)
 
 
@@ -310,7 +310,7 @@ def serve(conn, inp=None, out=None) -> None:
 
     while True:
         line = inp.readline()
-        if not line:                       # EOF — client closed the transport
+        if not line:                       # EOF - client closed the transport
             break
         line = line.strip()
         if not line:
@@ -362,7 +362,7 @@ def serve(conn, inp=None, out=None) -> None:
                 try:
                     parsed = json.loads(text)
                 except ValueError:
-                    parsed = None             # non-JSON text (shouldn't happen) — text content only
+                    parsed = None             # non-JSON text (shouldn't happen) - text content only
                 if isinstance(parsed, dict): # spec: structuredContent must be an object
                     result["structuredContent"] = parsed
                 _ok(rid, result)
@@ -370,4 +370,4 @@ def serve(conn, inp=None, out=None) -> None:
                 _ok(rid, {"content": [{"type": "text", "text": f"error: {e}"}], "isError": True})
         elif rid is not None:
             _err(rid, -32601, f"method not found: {method}")
-        # else: unknown notification — ignore
+        # else: unknown notification - ignore

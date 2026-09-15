@@ -1,5 +1,5 @@
 """
-engrim — project-scoped, cross-session memory for AI coding agents.
+engrim: project-scoped, cross-session memory for AI coding agents.
 
 Write cheaply, recall a relevant slice on demand. Context comes from retrieval, not from
 stuffing everything into the window. One SQLite file, project-tagged, hybrid keyword + semantic
@@ -97,7 +97,7 @@ def _is_strict(a=None) -> bool:
 
 
 # A project root is a dir holding a VCS dir OR a `.claude` project dir. `.claude` matters because
-# not every project is a git repo (e.g. a data/ops workspace) — without a marker the tag would fall
+# not every project is a git repo (e.g. a data/ops workspace) - without a marker the tag would fall
 # back to the raw cwd, so launching from a subdir silently files records under a SIBLING scope the
 # status line and boot pack never read (records land, counter never moves: "is it even logging?").
 _PROJECT_MARKERS = (".git", ".hg", ".svn", ".claude")
@@ -108,13 +108,13 @@ def _git_root(start: str):
 
     The walk STOPS AT $HOME and never climbs past it. `~/.claude` (and a stray `~/.git`) exist for
     almost everyone, so anchoring AT home would collapse every non-repo project under it into ONE
-    bucket — worse than the no-marker fallback. Refusing to climb PAST home is what makes the tag
+    bucket - worse than the no-marker fallback. Refusing to climb PAST home is what makes the tag
     deterministic: it used to keep walking, so the answer depended on whatever happened to sit in
     /home or C:\\Users on that particular machine, and a dev box with its own marker up there tagged
     differently than a bare CI runner. A real repo above home no longer resolves and falls back to
-    the raw cwd tag — coarse, but never wrong, and that case needs a marker at /home or C:\\Users."""
+    the raw cwd tag - coarse, but never wrong, and that case needs a marker at /home or C:\\Users."""
     # normcase, or the home guard fails open on Windows: `C:\Users\Tim` vs `c:/users/tim` are the same
-    # directory spelled two ways, and a missed match here is the exact collapse this guard prevents —
+    # directory spelled two ways, and a missed match here is the exact collapse this guard prevents -
     # every loose project under home in ONE bucket. No-op on POSIX, where case is significant.
     home = os.path.normcase(os.path.realpath(os.path.expanduser("~")))
     cur = os.path.abspath(start)
@@ -134,9 +134,9 @@ def _resolve_project(p, cwd=None):
 
     $ENGRIM_PROJECT gives a stable tag across machines/containers (host path != container path);
     project-root (a .git/.hg/.svn repo OR a .claude dir) makes the tag the same no matter which
-    subdirectory you launch from — non-repo workspaces anchor on .claude. `cwd` overrides the
+    subdirectory you launch from - non-repo workspaces anchor on .claude. `cwd` overrides the
     base directory (default: the process's): a hook should resolve against the workspace Claude Code
-    reports, not whatever cwd the hook process happens to inherit — see cmd_log's --hook path.
+    reports, not whatever cwd the hook process happens to inherit - see cmd_log's --hook path.
     """
     if p and p != "auto":
         return p
@@ -151,10 +151,10 @@ def _norm_project(path: str) -> str:
     """Stabilise a path-derived project tag so one project can't split into two memory buckets.
 
     Windows-only, and deliberately so: the tag is a dict key, and there the SAME directory arrives
-    spelled differently depending on who reports it — `C:\\p` from os.getcwd() vs `c:/p` from a hook
+    spelled differently depending on who reports it - `C:\\p` from os.getcwd() vs `c:/p` from a hook
     payload written by Claude Code. Separators and drive-letter case are the two ways that happens;
     both normalise here, the rest of the path keeps its casing so output still reads naturally.
-    POSIX paths are returned untouched — they're already the one true spelling."""
+    POSIX paths are returned untouched - they're already the one true spelling."""
     if os.name != "nt" or not path:
         return path
     import ntpath          # == os.path on Windows; named explicitly so this is testable anywhere
@@ -167,7 +167,7 @@ def _payload_project(payload, explicit=None):
     directory Claude Code offers so a session stays pinned to ONE project even if its cwd drifts during
     the session (e.g. a tool subprocess chdir'd elsewhere):
 
-        -p  >  $ENGRIM_PROJECT  >  workspace.project_dir (the launch root — stable)  >
+        -p  >  $ENGRIM_PROJECT  >  workspace.project_dir (the launch root - stable)  >
         workspace.current_dir  >  cwd  >  the hook process's own cwd
 
     project_dir is the directory Claude Code was started in and does not move; current_dir/cwd can.
@@ -189,7 +189,7 @@ def _csv(val):
 
 
 # The global user-layer: a reserved project tag whose records ride along with EVERY project's reads
-# (who you are, how you like to work — truths that aren't about any one repo). It's an additive layer,
+# (who you are, how you like to work - truths that aren't about any one repo). It's an additive layer,
 # not a new mode: a store with no global records behaves exactly as before, and ENGRIM_NO_GLOBAL turns
 # it off entirely. Write to it with `engrim add --global`; every read (boot pack, minder, recall) then
 # co-loads it alongside the current project. The sentinel is never produced by _resolve_project (which
@@ -203,7 +203,7 @@ def _global_on():
 
 def _scopes(project):
     """Project tags to READ for `project`: the project itself, plus the global user-layer. Collapses to
-    just [project] when reading the global layer itself or when ENGRIM_NO_GLOBAL is set — so the feature
+    just [project] when reading the global layer itself or when ENGRIM_NO_GLOBAL is set - so the feature
     is fully opt-out and a store with no global records is indistinguishable from before."""
     if project == GLOBAL_PROJECT or not _global_on():
         return [project]
@@ -278,7 +278,7 @@ def _init(conn: sqlite3.Connection) -> None:
         except sqlite3.OperationalError:
             pass
     # FTS5 ships with most Python builds, but not all. If it's missing, recall transparently
-    # falls back to LIKE — the tool still works, just without bm25 ranking.
+    # falls back to LIKE - the tool still works, just without bm25 ranking.
     try:
         conn.executescript(
             """
@@ -303,7 +303,7 @@ def _init(conn: sqlite3.Connection) -> None:
             """
         )
     except sqlite3.OperationalError:
-        pass  # no FTS5 in this SQLite build — LIKE fallback handles recall
+        pass  # no FTS5 in this SQLite build - LIKE fallback handles recall
     conn.commit()
 
 
@@ -315,7 +315,7 @@ def _fts_available(conn: sqlite3.Connection) -> bool:
 
 # Seeding markers. The md->store mirror is a ONE-TIME, install-moment "context builder": it pulls a
 # project's pre-install history (file-memory) into the store once, then steps aside. After that the
-# store is canonical — sessions read from it and `engrim add` logs to it; the historical md is never
+# store is canonical - sessions read from it and `engrim add` logs to it; the historical md is never
 # re-applied over the accumulating db (so a /clear of the chat still leaves the db carrying memory).
 SEED_KEY = "md_seeded"
 
@@ -349,7 +349,7 @@ def add_memory(conn, *, project, type, summary, detail=None, status="active",
          json.dumps(tags or []), json.dumps(links or []), source, origin_agent),
     )
     conn.commit()
-    # Auto-embed so the record is searchable by meaning immediately — no manual `engrim embed` step.
+    # Auto-embed so the record is searchable by meaning immediately - no manual `engrim embed` step.
     # Best-effort: a missing/slow/broken backend must never fail or slow down a write.
     fn, name = _resolve_embedder()
     if fn:
@@ -405,7 +405,7 @@ def _tag_filter_clause(col: str, tag: str | list[str] | None) -> tuple[str, list
 def _recall_rows(conn, project, query, k, type_=None, include_stale=False, tag=None):
     """Ranked relevant records for `query` (bm25 if FTS5 is present, else LIKE-by-recency).
 
-    Query is tokenized to bare words first — that's what stops a stray "C++"/"useState()"/quote from
+    Query is tokenized to bare words first - that's what stops a stray "C++"/"useState()"/quote from
     hitting an FTS5 syntax error. No query -> most-recent records. Shared by `recall` and the minder."""
     # Reads span the project + the global user-layer (additive; collapses to project-only when global
     # is empty/off), so user-level truths surface in recall and the minder for every project.
@@ -466,12 +466,12 @@ def _recall_rows(conn, project, query, k, type_=None, include_stale=False, tag=N
 
 
 def _log_search(conn, project, query, k):
-    """Search the transcript log — the 128 MB of history that `recall` never touches.
+    """Search the transcript log - the 128 MB of history that `recall` never touches.
 
     Deliberately OPT-IN (`recall --log`). The two-tier split (#98) is that the log never AUTO-loads
     into context; asking for it explicitly doesn't violate that, it's the payoff for having kept it.
     Plain scan, no FTS table: log.content is ~5 MB against 128 MB of raw, and a full scan measures at
-    ~21 ms over 44k rows — not worth an index, a migration, or the write amplification."""
+    ~21 ms over 44k rows - not worth an index, a migration, or the write amplification."""
     terms = [t for t in _content_terms(query or "")] or [(query or "").strip().lower()]
     terms = [t for t in terms if t]
     if not terms:
@@ -498,7 +498,7 @@ def _log_hit_line(row, query):
 def cmd_recall(conn, a) -> None:
     project = _resolve_project(a.project)
     tag = getattr(a, "tag", None)
-    # Hybrid (bm25 + semantic) for a real free-text query — same fusion the minder uses, so a manual
+    # Hybrid (bm25 + semantic) for a real free-text query - same fusion the minder uses, so a manual
     # `recall` understands meaning too. It degrades to pure lexical when semantic is off, so behavior
     # is unchanged without a backend. Type/stale/tag filters use the precise lexical path (the fusion path
     # is active-only and unfiltered by design).
@@ -525,7 +525,7 @@ def cmd_recall(conn, a) -> None:
         print(f"\n== log · {len(hits)} turn(s)"
               + (f" matching {a.query!r}" if a.query else "") + " ==")
         if not hits:
-            print("  (nothing in the transcript log — it holds prose plus one line per "
+            print("  (nothing in the transcript log - it holds prose plus one line per "
                   "state-changing action)")
         for r in hits:
             print(_log_hit_line(r, a.query))
@@ -547,7 +547,7 @@ _STOPWORDS = frozenset(
 
 def _content_terms(text):
     """Substantive query terms from a prompt: lowercase word tokens, minus stopwords and <3-char
-    noise, de-duped. This is the efficiency gate — trivial prompts ('ok', 'do it') yield too few
+    noise, de-duped. This is the efficiency gate - trivial prompts ('ok', 'do it') yield too few
     terms and the minder stays silent rather than inject noise."""
     seen, out = set(), []
     for t in re.findall(r"[a-zA-Z][a-zA-Z0-9_]{2,}", text.lower()):
@@ -560,7 +560,7 @@ def _content_terms(text):
 
 # --------------------------------------------------------------------------- semantic tier (default)
 # Embeddings are computed at WRITE time (`add` auto-embeds; `embed` backfills) and stored; the minder
-# does cheap cosine at READ time, fused with bm25 (reciprocal-rank fusion). ON by default — model2vec
+# does cheap cosine at READ time, fused with bm25 (reciprocal-rank fusion). ON by default - model2vec
 # (a fast *static* embedder: ~tens of ms to load, no per-query neural pass) ships as a core dependency.
 # Set ENGRIM_EMBED=off to force pure lexical (zero third-party deps); a missing/broken backend also
 # degrades to lexical, so retrieval never hard-fails. [ENGRIM_EMBED_MODEL=<hf-id> overrides the model.]
@@ -570,9 +570,9 @@ _EMBEDDER_OVERRIDE = None     # tests/embedders inject (encode_fn, model_name)
 
 def _resolve_embedder():
     """Return (encode_fn, model_name) or (None, None). encode_fn maps str -> list[float].
-    Semantic recall is ON by default — model2vec ships as a core dependency, so the minder ranks by
+    Semantic recall is ON by default - model2vec ships as a core dependency, so the minder ranks by
     meaning out of the box. Set ENGRIM_EMBED=off (or 0/none/false/lexical) to force pure-lexical.
-    Any load failure degrades to (None, None) — a missing/broken model is never a hard error."""
+    Any load failure degrades to (None, None) - a missing/broken model is never a hard error."""
     global _EMBEDDER
     if _EMBEDDER_OVERRIDE is not None:
         return _EMBEDDER_OVERRIDE
@@ -609,7 +609,7 @@ def _blob_vec(b):
 
 
 def _embed_row(conn, mid, summary, detail, fn, name):
-    """Compute + store one record's embedding — the semantic write step, shared by `add` (auto) and
+    """Compute + store one record's embedding - the semantic write step, shared by `add` (auto) and
     `embed` (backfill). Caller passes a resolved (fn, name) so this stays a tight loop. INSERT OR
     REPLACE keeps it idempotent per (record, model)."""
     vec = fn((summary or "") + "\n" + (detail or ""))
@@ -629,7 +629,7 @@ def _cosine(a, b):
 
 # Minimum cosine for a semantic match to count. Below this the static embedder is at noise level
 # (empirically with potion-8M: unrelated text ~0.00-0.12; strong matches ~0.50-0.73; short natural-
-# language paraphrases of a record — e.g. "what database did we pick" against a SQLite decision —
+# language paraphrases of a record - e.g. "what database did we pick" against a SQLite decision -
 # land ~0.30-0.46). The floor sits at 0.30 to admit those genuine paraphrases while staying well clear
 # of the <0.12 noise band. Lowering it only ever adds matches above 0.30; nothing that cleared the old
 # value drops out. Recall and the minder use this; the stricter capture-check in `review`
@@ -659,7 +659,7 @@ def _semantic_rows(conn, project, query, k):
 
 def _minder_rows(conn, project, lexical_query, semantic_query, k):
     """Records for the minder: hybrid bm25 + cosine via reciprocal-rank fusion when a semantic backend
-    is available, else pure lexical. The semantic path is fully guarded — it never breaks retrieval."""
+    is available, else pure lexical. The semantic path is fully guarded - it never breaks retrieval."""
     lex = _recall_rows(conn, project, lexical_query, k * 2)
     try:
         sem = _semantic_rows(conn, project, semantic_query, k * 2)
@@ -683,7 +683,7 @@ def cmd_assist(conn, a) -> None:
     """The minder: a `UserPromptSubmit` hook that auto-glides the relevant db slice into context.
 
     Reads the prompt from stdin, ranks the store against it, and injects only the top few records,
-    budget-capped — so the user never has to say "go fetch X from memory", and the cost is a small
+    budget-capped - so the user never has to say "go fetch X from memory", and the cost is a small
     *relevant* slice per turn instead of carrying the whole history in-window. Hits-only and
     gated on substantive terms: trivial prompts inject nothing (no wasted tokens). Emits the
     UserPromptSubmit hook JSON."""
@@ -696,13 +696,13 @@ def cmd_assist(conn, a) -> None:
     except Exception:
         return emit("")
     # Same stable resolution as the status line + log hook, so the minder writes its "in play" marker
-    # under the project the bar actually reads — they never disagree about which project this session is.
+    # under the project the bar actually reads - they never disagree about which project this session is.
     project = _payload_project(payload, a.project)
     emit(_assist_block(conn, project, payload.get("prompt") or "", a.k, a.budget))
 
 
 def _assist_block(conn, project, prompt, k=5, budget=600) -> str:
-    """The minder's text for one prompt — shared by the Claude Code hook (wrapped in hook JSON) and
+    """The minder's text for one prompt - shared by the Claude Code hook (wrapped in hook JSON) and
     the OpenCode adapter (plain text). Empty string when nothing is worth the tokens."""
     terms = _content_terms(prompt)
     if len(terms) < 2:               # too little signal to be worth any tokens
@@ -722,7 +722,7 @@ def _assist_block(conn, project, prompt, k=5, budget=600) -> str:
         out.append(line)
         used += len(line) + 1
     # Mid-session auto-curate backstop: if a real backlog of uncaptured decisions has built up inside a
-    # long session, nudge the AGENT — not the user — to promote the durable ones now (the boot directive
+    # long session, nudge the AGENT - not the user - to promote the durable ones now (the boot directive
     # only fires at the NEXT session). Conservative: gated on a backlog floor so ordinary work doesn't
     # trip it; decision-only + dedup-safe, so it self-clears the moment they're captured. Cheap, model-free.
     directive = ""
@@ -732,19 +732,19 @@ def _assist_block(conn, project, prompt, k=5, budget=600) -> str:
             directive = (f"\n[engrim · auto-curate] {unc} decisions are logged but not yet in curated "
                          "memory. Before your next reply, SILENTLY `engrim add` the durable ones "
                          "(skip chatter, reversed calls, and false-positives); don't announce it. "
-                         "Record what was MEASURED, not what was concluded — 'momentum score is the "
+                         "Record what was MEASURED, not what was concluded - 'momentum score is the "
                          "constant 92.0' ages well; 'momentum looks broken' doesn't.")
     except Exception:
         directive = ""
     if not out and not directive:
         return ""                                             # nothing relevant -> spend nothing
     if out:
-        try:  # record the pull so the ambient status line can show "N in play" — out-of-band, never in chat
+        try:  # record the pull so the ambient status line can show "N in play" - out-of-band, never in chat
             _meta_set(conn, project, "minder_n", str(len(out)))
             _meta_set(conn, project, "minder_ts", _now())
         except Exception:
             pass
-    head = ("Possibly-relevant project memory (engrim), pulled for this message — use if helpful:\n"
+    head = ("Possibly-relevant project memory (engrim), pulled for this message - use if helpful:\n"
             + "\n".join(out)) if out else ""
     return (head + directive).strip()
 
@@ -762,14 +762,14 @@ def cmd_statusline(conn, a) -> None:
     except Exception:
         pass
     # Resolve from the session's STABLE launch dir (project_dir), not whatever cwd the status-line
-    # process inherited — a drifted cwd would point the bar at a different project's memory mid-session.
+    # process inherited - a drifted cwd would point the bar at a different project's memory mid-session.
     project = _payload_project(data, a.project)
     try:
         n = conn.execute("SELECT COUNT(*) FROM memories WHERE project=? AND status='active'",
                          (project,)).fetchone()[0]
     except Exception:
         n = 0
-    # Turns logged for THIS session — the live, ticking-up signal. Curated count stays put until you
+    # Turns logged for THIS session - the live, ticking-up signal. Curated count stays put until you
     # `add`; the transcript log grows every turn on its own, so this is what shows engrim is *working*
     # as the conversation deepens (the answer to "why isn't the number moving?").
     turns = 0
@@ -784,8 +784,8 @@ def cmd_statusline(conn, a) -> None:
         return
     parts = [f"🧠 engrim · {n} curated" if n else "🧠 engrim · capturing"]
     if turns:
-        parts.append(f"+{turns} logged")           # ticks up every turn — engrim is recording live
-    try:    # the live "minder" pull from the last prompt, if recent — proof it's helping NOW
+        parts.append(f"+{turns} logged")           # ticks up every turn - engrim is recording live
+    try:    # the live "minder" pull from the last prompt, if recent - proof it's helping NOW
         mn, mts = _meta_get(conn, project, "minder_n"), _meta_get(conn, project, "minder_ts")
         if mn and mts and int(mn) > 0:
             age = (_dt.datetime.now().astimezone() - _dt.datetime.fromisoformat(mts)).total_seconds()
@@ -794,7 +794,7 @@ def cmd_statusline(conn, a) -> None:
     except Exception:
         pass
     # Clear-readiness, live and model-free: recent decisions not yet curated. Ticks up as you decide
-    # things, drops back to ✓ as you capture them — the ambient "is it safe to clear?" answer (#143).
+    # things, drops back to ✓ as you capture them - the ambient "is it safe to clear?" answer (#143).
     unc = _uncaptured_count(conn, project)
     if unc:
         parts.append(f"✎ {unc} to capture")   # pencil, not a warning: capturing is normal mid-work
@@ -807,7 +807,7 @@ _BOOT_SUMMARY_CAP = 200   # keep the pack lean: essay-length summaries are trunc
 
 # The designated session-resume cursor: the newest active record carrying this tag is pinned to the
 # TOP of the boot pack and shown UNTRUNCATED, so a fresh session after /clear opens on exactly where
-# we left off — continue-as-clear (#191 continuity, taken the last mile). It rides OUTSIDE the per-type
+# we left off - continue-as-clear (#191 continuity, taken the last mile). It rides OUTSIDE the per-type
 # round-robin and isn't summary-capped; everything else fills the budget around it.
 _RESUME_TAG = "resume-pointer"
 
@@ -827,7 +827,7 @@ def _boot_pack(rows, budget):
     first and untruncated. Shared by `context` (display) and `stats` (economics) so the reported cost
     is exactly the pack that loads."""
     picked, used = [], 0
-    # Pin the resume cursor first, untruncated — the one record we never clip, since it IS the place to
+    # Pin the resume cursor first, untruncated - the one record we never clip, since it IS the place to
     # resume. Newest wins if several are tagged. It still counts against the budget; the rest fills around.
     resume = [r for r in rows if _is_resume(r)]
     cursor = max(resume, key=lambda r: r["ts"]) if resume else None
@@ -865,18 +865,18 @@ def _boot_pack(rows, budget):
 
 # The boot pack's recent-activity tail (#191): the freshest decision-signal turns from the LOG that
 # aren't yet in curated memory, so a cold boot (e.g. right after /clear) still sees what was just
-# decided — before anyone has promoted it to a record. This is the fix for the recency hole: capture
+# decided - before anyone has promoted it to a record. This is the fix for the recency hole: capture
 # already records every turn, but the curated boot pack never read the log, so the last stretch of work
-# vanished on clear. Deliberately tiny and SEPARATE from the curated budget — a hard item cap plus its
-# own char sub-budget — so it can never crowd out curated records or bloat context. Dedup uses the
+# vanished on clear. Deliberately tiny and SEPARATE from the curated budget - a hard item cap plus its
+# own char sub-budget - so it can never crowd out curated records or bloat context. Dedup uses the
 # SHARED captured-check (`_is_captured`), same as `review` and the status bar, so the three surfaces
 # can never disagree about what's already curated. Biases toward showing recent work over hiding it.
-_TAIL_MAX_ITEMS = 3        # hard cap on tail lines — recency hint, not a transcript dump
+_TAIL_MAX_ITEMS = 3        # hard cap on tail lines - recency hint, not a transcript dump
 _TAIL_BUDGET = 600         # own char sub-budget, independent of the curated boot budget
 _TAIL_SNIPPET_CAP = 180    # per-line truncation
 
 # Capture-floor: how far back the AUTOMATIC recency net looks. A bare last-N-turns window silently
-# loses a decision when a long tail of verification/chatter — or a hard session kill mid-capture —
+# loses a decision when a long tail of verification/chatter - or a hard session kill mid-capture -
 # pushes it past N before the next boot. So rather than a fixed turn count, scan back to the
 # project's newest curated record: every decision-signal turn logged SINCE the last `add` stays
 # eligible to resurface until it is itself captured. A hard ceiling keeps the scan cheap and
@@ -884,7 +884,7 @@ _TAIL_SNIPPET_CAP = 180    # per-line truncation
 # window so a fresh project stays lean.
 _UNCAPTURED_MAX_SCAN = 200
 
-# ONE lean recent window for every clear-readiness surface — the status bar, the minder's auto-curate
+# ONE lean recent window for every clear-readiness surface - the status bar, the minder's auto-curate
 # nudge, the boot tail, and `review`. They used to carry their own numbers (25 vs 40 vs a flat -k),
 # so the bar could count a turn `review` never scanned and the two would report different backlogs
 # on the same db (#747). Same window + same captured-check = they agree by construction.
@@ -896,7 +896,7 @@ _TAIL_SCAN = _CAPTURE_SCAN
 # AGENT (not the user) to promote them.
 #
 # Floor of 2, lowered from 4 (Tim, 2026-08-11): a wrap-time-only capture habit loses exactly the
-# sessions that ran long — the ones worth keeping — because a window-close or limit-expiry can't
+# sessions that ran long - the ones worth keeping - because a window-close or limit-expiry can't
 # curate itself. Capture wants to happen at the MOMENT of the decision. The old floor of 4 was priced
 # for a counter that cried wolf; now that the captured-check can't false-positive on a paraphrase
 # (#747), an earlier nudge is cheap and the backlog rarely gets deep enough to lose.
@@ -915,7 +915,7 @@ def _parse_ts(s):
 
 
 def _capture_floor(conn, project):
-    """Instant of the project's newest curated record — the 'caught up to here' mark the recency net
+    """Instant of the project's newest curated record - the 'caught up to here' mark the recency net
     scans back to. None if nothing is curated yet. Project-scoped: a global record isn't a capture of
     THIS project's decisions."""
     try:
@@ -928,7 +928,7 @@ def _capture_floor(conn, project):
 
 def _past_floor(r, floor, i, scan):
     """Stop condition for a recency scan iterating log rows newest-first. Hybrid window: always scan
-    the lean recent `scan` turns, AND extend back to the capture floor — stop only once a turn is
+    the lean recent `scan` turns, AND extend back to the capture floor - stop only once a turn is
     BOTH outside the recent window and older than the last capture. The recent window protects a
     just-made decision even when a later unrelated `add` moved the floor past it; the floor extends
     reach for a decision buried under a long tail of chatter (or a mid-capture session kill)."""
@@ -990,13 +990,13 @@ def _uncaptured_state_key(conn, project):
 
 
 def _uncaptured_count(conn, project, scan=_CAPTURE_SCAN, cap=9):
-    """Count of recent decision-signal log turns not yet covered by a curated record — the live
+    """Count of recent decision-signal log turns not yet covered by a curated record - the live
     "safe to clear?" signal behind the status bar's `✎ N to capture` and the minder's auto-curate
     nudge. Shares BOTH the scan window (`_CAPTURE_SCAN`) and the captured-check (`_is_captured`) with
     `review`, so the ambient number and the explicit command can't contradict each other (#747).
 
     Kept cheap two ways: the lexical tier resolves most snippets with no model at all, and the result
-    is memoized against a fingerprint of the rows it read — so the status bar, which re-runs on every
+    is memoized against a fingerprint of the rows it read - so the status bar, which re-runs on every
     refresh, recomputes only when the log or the store actually changed."""
     try:
         state = _uncaptured_state_key(conn, project)
@@ -1053,7 +1053,7 @@ def cmd_context(conn, a) -> None:
         print(f"(no memory for project={project})")
         return
     if picked:
-        print(f"🧠 engrim · memory restored for this project — you don't have to re-explain · {project}")
+        print(f"🧠 engrim · memory restored for this project: you don't have to re-explain · {project}")
         print(f"  {len(picked)} of {len(rows)} curated records loaded (~{used} chars) · the rest one `recall` away")
 
         def _line(r, summ):
@@ -1079,13 +1079,13 @@ def cmd_context(conn, a) -> None:
             _line(r, summ)
         if len(picked) < len(rows):
             print(f"\n(+{len(rows) - len(picked)} more · `engrim recall -q ...` to pull on demand)")
-    # Recency tail: what was just decided but isn't a curated record yet — so a cold boot doesn't lose
+    # Recency tail: what was just decided but isn't a curated record yet - so a cold boot doesn't lose
     # the last stretch of work (#191). Tiny by construction; promote the durable ones to make them stick.
     if tail:
-        print("\n[RECENT — logged this project, not yet curated]")
+        print("\n[RECENT: logged this project, not yet curated]")
         for ts, snip in tail:
             print(f"- [{ts[:16]}] {snip}")
-    # Clear-readiness verdict — the same gentle signal as the status bar, so the summary answers
+    # Clear-readiness verdict - the same gentle signal as the status bar, so the summary answers
     # "safe to /clear?" too. Capturing is a normal part of working, so this is an invitation (✎),
     # never a warning. Only shown once there's session history to reason about.
     #
@@ -1094,28 +1094,28 @@ def cmd_context(conn, a) -> None:
     # hook fires reliably at a hard kill), so the *next* session's agent is the recovery path. The raw
     # log already survived the close (Stop hook every turn + boot transcript reconciliation, #101); this
     # directive tells the fresh agent to promote the durable survivors into curated memory before it does
-    # anything else — zero user interaction, judgment applied (so #219-type false-positives are skipped),
+    # anything else - zero user interaction, judgment applied (so #219-type false-positives are skipped),
     # dedup-safe (the detector drops anything already curated). Self-healing: the capture-floor keeps a
     # survivor eligible across boots until it is actually captured.
     if conn.execute("SELECT 1 FROM log WHERE project = ? LIMIT 1", (project,)).fetchone():
         unc = _uncaptured_count(conn, project)
         if getattr(a, "agent_directive", False):
             if unc:   # cheap decision-only gate; the agent's `engrim review` does the thorough semantic pass
-                print("\n[⟳ AUTO-CURATE — a prior session left decisions in the raw log but NOT in curated "
+                print("\n[⟳ AUTO-CURATE: a prior session left decisions in the raw log but NOT in curated "
                       "memory (a window-close/limit-expiry can't curate itself). You are the recovery path.]")
                 print("Before you address the user's message, SILENTLY curate the durable survivors:")
                 print("  1. `engrim review`  → the full uncaptured-decision list (heuristic candidates)")
                 print("  2. for each GENUINELY durable one:  "
                       "engrim add -t <decision|fact|state|feedback> -s \"<one line>\" [-d \"<why>\"]")
-                print("  Skip chatter, reversed calls, and product copy (known false-positives) — keep the "
+                print("  Skip chatter, reversed calls, and product copy (known false-positives) - keep the "
                       "store high-signal. Don't announce this; just curate, then proceed.")
                 print("  Write what was MEASURED, not what was concluded: 'momentum score is the constant "
                       "92.0' stays true and useful; 'momentum looks broken' rots into a dead end.")
         elif unc:
-            print(f"\n✎ {unc} recent decision(s) not yet curated — worth capturing before your next "
+            print(f"\n✎ {unc} recent decision(s) not yet curated: worth capturing before your next "
                   "/clear:  engrim add -t decision -s \"…\"")
         else:
-            print("\n✓ recent decisions look captured — safe to /clear.")
+            print("\n✓ recent decisions look captured: safe to /clear.")
 
 
 def cmd_hook(conn, a) -> None:
@@ -1158,7 +1158,7 @@ def cmd_hook(conn, a) -> None:
     import io
     # ONE-TIME context build: the very first session for a project seeds the store from Claude
     # Code's file-memory (its pre-install history), then we mark it seeded and never re-mirror.
-    # Afterwards the store is canonical — the hook just injects from it; new knowledge arrives via
+    # Afterwards the store is canonical - the hook just injects from it; new knowledge arrives via
     # `engrim add`. A sync hiccup must NEVER break the hook (it has to emit valid JSON), so guard all.
     if not getattr(a, "no_sync", False):
         project = _resolve_project(a.project)
@@ -1198,7 +1198,7 @@ def cmd_supersede(conn, a) -> None:
 
 
 def cmd_retire(conn, a) -> None:
-    """Mark every active resume-pointer `done` — the records the boot pack would pin under
+    """Mark every active resume-pointer `done` - the records the boot pack would pin under
     [▶ RESUME HERE], selected by the same predicate (`_is_resume`) so the two can't disagree.
 
     A pointer says where one session left off. Once that work is finished, or the store moves
@@ -1208,7 +1208,7 @@ def cmd_retire(conn, a) -> None:
     that does. `done` is the same monotonic move `supersede` makes: nothing is erased, the record
     stays readable with --include-stale, and `merge` carries the retirement to other copies.
     Scoped to exactly one project like every other write (`prune`, `embed`), so a pointer written
-    to the global layer — which the pack pins in every project — takes `-p __global__` or `--all`."""
+    to the global layer - which the pack pins in every project - takes `-p __global__` or `--all`."""
     if a.all:
         project = None
         rows = conn.execute(
@@ -1231,7 +1231,7 @@ def cmd_retire(conn, a) -> None:
                           "pointers": [{**dict(r), "status": status} for r in pointers]},
                          default=str))
         return
-    head = "DRY-RUN — no changes written; would retire" if a.dry_run else "retired"
+    head = "DRY-RUN: no changes written; would retire" if a.dry_run else "retired"
     print(f"{head} {len(pointers)} resume-pointer(s) · {scope}")
     for r in pointers:
         print(f"  #{r['id']} {r['ts'][:16]}  {(r['summary'] or '')[:80]}")
@@ -1239,7 +1239,7 @@ def cmd_retire(conn, a) -> None:
 
 def cmd_project(conn, a) -> None:
     """One line per project tag: records, active records, last write. Scoped like every other
-    read — the cwd's project by default, `-p` for another, `--global` for the user-layer — with
+    read - the cwd's project by default, `-p` for another, `--global` for the user-layer - with
     `--all` for every project in the store. `engrim projects` is that last form by name (its
     subparser sets all=True), so the plural keeps listing the whole store as it always has.
     `--json` gives the same rows as a list of objects."""
@@ -1298,7 +1298,7 @@ def cmd_stats(conn, a) -> None:
 HOOK_EVENT = "SessionStart"
 
 CLAUDE_MD_BLOCK = """\
-## Project Memory (engrim) — use it every session, scoped by project path
+## Project Memory (engrim) - use it every session, scoped by project path
 
 A project-tagged SQLite memory store persists decisions, facts, feedback, and state across
 sessions. A SessionStart hook mirrors your file-memory in and auto-injects the current project's
@@ -1308,7 +1308,7 @@ proactively:
 - Write at every decision/correction/durable fact: `engrim add -t <decision|fact|feedback|state|user|reference> -s "<one line>" [--tags a,b]`.
 - Cross-project truths about you (authorship, conventions, how you like to work): add `--global` so they load in every project.
 - Supersede stale records: `engrim supersede --id N --status superseded`.
-Keep it high-signal — curation and retrieval precision are the point, not volume.
+Keep it high-signal - curation and retrieval precision are the point, not volume.
 """
 
 
@@ -1342,7 +1342,7 @@ def _verify_hook_bin(engrim_bin: str):
     `2>/dev/null || true` so a session is never broken by a bad hook, which also means a completely
     non-functional install still prints a full column of green checkmarks. Setup is the one moment the
     user is watching, so the checkmark gets earned here instead of assumed. Hooks run through bash on
-    every platform (Git Bash on Windows), so the check has to go through bash to be worth anything —
+    every platform (Git Bash on Windows), so the check has to go through bash to be worth anything -
     it is the shell quoting, not the binary, that broke."""
     import subprocess              # local: `setup` runs once, the status line runs every refresh
     shell = shutil.which("bash")
@@ -1648,10 +1648,10 @@ def _setup_claude(conn, a, engrim_bin: str, dry_run: bool = False) -> None:
             sys.exit(f"can't read {settings_path} ({e}). Fix the permissions, then re-run.")
         except Exception as e:
             sys.exit(f"couldn't load {settings_path} ({type(e).__name__}: {e}). "
-                     f"The file itself may be fine — please report this with the message above.")
+                     f"The file itself may be fine - please report this with the message above.")
 
     if bin_error:
-        print(f"! the engrim command isn't runnable from a shell — {bin_error}\n"
+        print(f"! the engrim command isn't runnable from a shell - {bin_error}\n"
               f"    tried: {engrim_bin} --help\n"
               f"  Wiring the hooks anyway, but they will do NOTHING until this resolves.\n")
 
@@ -1672,7 +1672,7 @@ def _setup_claude(conn, a, engrim_bin: str, dry_run: bool = False) -> None:
     if isinstance(sl, dict) and _cmd_has(sl.get("command") or "", "engrim"):
         print("✓ status line already shows engrim")
     elif sl:
-        print(f"• a status line is already configured — leaving it. To show engrim, set its command to: {sl_cmd}")
+        print(f"• a status line is already configured - leaving it. To show engrim, set its command to: {sl_cmd}")
     else:
         settings["statusLine"] = {"type": "command", "command": sl_cmd}
         changed = True
@@ -1788,11 +1788,11 @@ def cmd_setup(conn, a) -> None:
             except Exception:
                 pass
         else:
-            print("• semantic recall unavailable (model2vec didn't load) — running pure-lexical for now")
+            print("• semantic recall unavailable (model2vec didn't load) - running pure-lexical for now")
 
     if (wire_claude or wire_codex) and bin_error and not dry_run:
         sys.stdout.flush()
-        sys.exit(f"\nNOT done — the hooks are written, but `{engrim_bin} --help` fails in a shell "
+        sys.exit(f"\nNOT done - the hooks are written, but `{engrim_bin} --help` fails in a shell "
                  f"({bin_error}),\nso every one of them will silently do nothing. Fix that and "
                  f"re-run `engrim setup`.")
 
@@ -2325,7 +2325,7 @@ def cmd_doctor(conn, a) -> None:
 
     # Formatted terminal output
     print("=" * 80)
-    print("                 🩺 ENGRIM DOCTOR — DIAGNOSTIC HEALTH CHECK                    ")
+    print("                 🩺 ENGRIM DOCTOR: DIAGNOSTIC HEALTH CHECK                    ")
     print("=" * 80)
     p = report["platform"]
     print(f"Platform   : {p['system']} ({p['machine']}) · Python {p['python']}")
@@ -2447,7 +2447,7 @@ def _parse_md(path: str):
 
 
 def cmd_import(conn, a) -> None:
-    """Import markdown notes (a file or a directory tree) as records — one record per file.
+    """Import markdown notes (a file or a directory tree) as records - one record per file.
     Frontmatter `description`/`type` are honored; otherwise the first heading becomes the summary."""
     project = _resolve_project(a.project)
     paths = []
@@ -2491,7 +2491,7 @@ _INDEX_LINE_RE = re.compile(r"^\s*[-*]\s*\[[^\]]+\]\([^)]+\.(?:md|markdown)\)")
 
 
 def _is_tombstone(body: str) -> bool:
-    """A redirect stub like 'Merged into MEMORY.md ...' — content lives elsewhere, not a record."""
+    """A redirect stub like 'Merged into MEMORY.md ...' - content lives elsewhere, not a record."""
     for line in (body or "").splitlines():
         s = line.strip()
         if s:
@@ -2539,7 +2539,7 @@ def _claude_memory_dir(cwd: str = None):
 
     Claude Code stores it at ~/.claude/projects/<slug>/memory where <slug> is the abs cwd with
     every non-alphanumeric char turned into '-'. `$ENGRIM_MD_DIR` overrides for non-standard
-    setups. Returns the path only if it exists on disk, else None — so callers no-op cleanly for
+    setups. Returns the path only if it exists on disk, else None - so callers no-op cleanly for
     users who don't use file-memory at all."""
     env = os.environ.get("ENGRIM_MD_DIR")
     if env:
@@ -2552,7 +2552,7 @@ def _claude_memory_dir(cwd: str = None):
 def _claude_transcripts(cwd=None, limit=6):
     """The most-recent Claude Code transcript JSONLs for this project (they live beside the memory
     dir, in ~/.claude/projects/<slug>/). Bounded to the newest `limit` so SessionStart catch-up
-    stays cheap — those cover any session that just crashed/closed without a clean SessionEnd."""
+    stays cheap - those cover any session that just crashed/closed without a clean SessionEnd."""
     env = os.environ.get("ENGRIM_MD_DIR")
     if env:
         base = os.path.dirname(env.rstrip("/\\"))      # transcripts sit next to the memory dir
@@ -2573,7 +2573,7 @@ def _do_sync(conn, project, path, hub="MEMORY.md", exclude=None, dry_run=False, 
     One record per topic file (`md:file:<base>`), tombstone redirects skipped; the hub file's
     inline-content sections become records (`md:section:<slug>`); legacy `import:<base>` rows are
     adopted; rows whose md source has vanished get superseded. Returns (added, updated, pruned,
-    skipped, plan). Pure data movement — no printing — so `sync`, `hook`, and setup can all reuse it."""
+    skipped, plan). Pure data movement - no printing - so `sync`, `hook`, and setup can all reuse it."""
     hub = os.path.basename(hub) if hub else "MEMORY.md"
     by_source = {}
     for r in conn.execute(
@@ -2663,7 +2663,7 @@ def cmd_sync(conn, a) -> None:
     path = a.path
     if a.claude and not path:
         path = _claude_memory_dir()
-        if not path:                       # no file-memory for this project — nothing to mirror
+        if not path:                       # no file-memory for this project - nothing to mirror
             _meta_set(conn, project, SEED_KEY, _now())   # mark done; store is db-native from here
             print(f"sync: no Claude memory dir for project={project} (nothing to seed)")
             return
@@ -2675,7 +2675,7 @@ def cmd_sync(conn, a) -> None:
     # Seed-once gate for the automatic (--claude) path: don't let install-time history keep
     # overwriting the live, accumulating store on every session close.
     if a.claude and not a.force and _meta_get(conn, project, SEED_KEY) is not None:
-        print(f"sync: project={project} already seeded — store is canonical now, nothing "
+        print(f"sync: project={project} already seeded - store is canonical now, nothing "
               f"re-imported (use --force to rebuild from md).")
         return
 
@@ -2683,7 +2683,7 @@ def cmd_sync(conn, a) -> None:
         conn, project, path, hub=a.hub, exclude=a.exclude, dry_run=a.dry_run, no_prune=a.no_prune)
     if not a.dry_run:
         _meta_set(conn, project, SEED_KEY, _now())
-    head = "DRY-RUN — no changes written" if a.dry_run else "synced"
+    head = "DRY-RUN: no changes written" if a.dry_run else "synced"
     print(f"{head}: +{added} add, ~{updated} update, {pruned} retire, {skipped} skip "
           f"-> project={project}")
     if a.dry_run or a.verbose:
@@ -2692,14 +2692,14 @@ def cmd_sync(conn, a) -> None:
 
 
 # --------------------------------------------------------------------------- merge
-# Two stores of the same project meet whenever a project's agents run in more than one place — a
-# laptop and a CI runner, two machines, two agents at once — and each ends up holding decisions the
+# Two stores of the same project meet whenever a project's agents run in more than one place - a
+# laptop and a CI runner, two machines, two agents at once - and each ends up holding decisions the
 # other lacks. `merge` folds OTHER's records into this store, idempotently, so both places can keep
 # writing and reconcile afterwards.
 #
 # Identity is content, not id. `memories.id` is assigned per store, so two stores seeded from the
 # same base hand the same id to different records; the natural key is
-# (project, ts, type, summary, detail) — ts is to the second with a zone, and nothing ever rewrites
+# (project, ts, type, summary, detail) - ts is to the second with a zone, and nothing ever rewrites
 # a record's text (`supersede` changes status only). Status is monotonic: active -> superseded/done
 # is the only mutation engrim makes, so a non-active status on either side wins, which makes the
 # merge safe in either direction and more than once. `memories_fts` follows through its triggers;
@@ -2710,7 +2710,7 @@ _MERGE_KEY_SQL = "project = ? AND ts = ? AND type = ? AND summary = ? AND coales
 
 
 def _open_store_readonly(path: str) -> sqlite3.Connection:
-    """Open another engrim store for reading only — no schema migration, no WAL switch, and the
+    """Open another engrim store for reading only - no schema migration, no WAL switch, and the
     file is never created or written. Exits with a plain message when `path` is not an engrim
     store."""
     if not os.path.isfile(path):
@@ -2806,7 +2806,7 @@ def cmd_merge(conn, a) -> None:
         sys.exit("merge: source and target are the same store")
     added, restatused, skipped, log_added, plan = merge_store(
         conn, a.other, project=a.project, dry_run=a.dry_run)
-    head = "DRY-RUN — no changes written" if a.dry_run else "merged"
+    head = "DRY-RUN: no changes written" if a.dry_run else "merged"
     print(f"{head}: +{added} add, ~{restatused} status, {skipped} skip, +{log_added} log "
           f"-> from {a.other}")
     if a.dry_run or a.verbose:
@@ -2866,7 +2866,7 @@ def cmd_backup(conn, a) -> None:
 
 # --------------------------------------------------------------------------- transcript log
 # A SEPARATE, append-only tier from `memories`. It records the raw back-and-forth so engineers
-# have a full, replayable record — but it is NEVER injected into the boot pack / context window, so
+# have a full, replayable record - but it is NEVER injected into the boot pack / context window, so
 # it can't bloat a session or drag the system. Curated memory (small, loaded) and the transcript
 # log (complete, never loaded) are two tiers that don't compete.
 
@@ -2874,7 +2874,7 @@ def cmd_backup(conn, a) -> None:
 #
 # The log used to keep prose only ("the actual conversation, not machinery"), which left it too
 # chat-focused: measured on one real session, prose was 14 KB against 315 KB of tool traffic, so the
-# record of what was actually DONE — files changed, releases cut — existed nowhere searchable (#756).
+# record of what was actually DONE - files changed, releases cut - existed nowhere searchable (#756).
 #
 # The fix is a snippet of value per action, not the payload. A tool call becomes ONE line naming the
 # change; the 93 KB of tool_use in that session compresses to ~10 KB of readable spine. Deliberately
@@ -2913,7 +2913,7 @@ def _action_lines(blocks):
             if not cmd or not _STATE_CHANGING_CMD.search(cmd):
                 continue
             desc = " ".join((inp.get("description") or "").split())
-            line = f"[ran] {desc} — {cmd}" if desc else f"[ran] {cmd}"
+            line = f"[ran] {desc} - {cmd}" if desc else f"[ran] {cmd}"
             out.append(line[:_ACTION_LINE_CAP].rstrip())
     return out
 
@@ -2923,7 +2923,7 @@ def _extract_text(content, include_thinking=False):
 
     `content` is a str (plain user prompt) or a list of typed blocks. We keep `text` (the visible
     exchange), optionally `thinking`, plus a one-line summary of each state-changing tool call
-    (see `_action_lines`). Tool RESULTS and images are still skipped — they're bulk, not signal."""
+    (see `_action_lines`). Tool RESULTS and images are still skipped - they're bulk, not signal."""
     if isinstance(content, str):
         return content.strip()
     if not isinstance(content, list):
@@ -2947,7 +2947,7 @@ def _ingest_transcript(conn, project, path, session=None, include_thinking=False
     Idempotent two ways: a per-session byte-offset cursor (in engrim_meta) means we only parse what's
     been appended since last time (cheap, even on multi-MB transcripts), and a UNIQUE msg_uuid with
     INSERT OR IGNORE guarantees no duplicates even if the file is re-read from the top. Sidechain
-    (subagent) turns are skipped — this is the human<->assistant back-and-forth."""
+    (subagent) turns are skipped - this is the human<->assistant back-and-forth."""
     if not path or not os.path.isfile(path):
         return 0
     # Key the cursor by session id. For a Claude transcript the filename stem *is* the session id,
@@ -3059,8 +3059,8 @@ def cmd_log(conn, a) -> None:
         # Resolve from the session's STABLE launch dir, not the hook process's os.getcwd(). A Stop
         # hook can be spawned with an incidental cwd (e.g. it inherits one a tool subprocess chdir'd
         # into), and a single Claude session is one transcript file with one session id. Keying
-        # ingestion off an unstable cwd splits that session across project buckets — each with its own
-        # byte-offset cursor — so turns after the drift land in the wrong project, the original
+        # ingestion off an unstable cwd splits that session across project buckets - each with its own
+        # byte-offset cursor - so turns after the drift land in the wrong project, the original
         # cursor stalls, and the status line's per-(project,session) count freezes. Routing through
         # _payload_project (project_dir-first) keeps the whole session in one bucket and, because the
         # status line resolves the same way, keeps the bucket and the displayed count in agreement.
@@ -3071,7 +3071,7 @@ def cmd_log(conn, a) -> None:
             unc = _uncaptured_count(conn, project)
             if unc > 0:
                 sys.stderr.write(
-                    f"[engrim] {unc} uncaptured decision(s) detected in {project} — "
+                    f"[engrim] {unc} uncaptured decision(s) detected in {project} - "
                     "capture with `engrim add` before stopping\n"
                 )
                 sys.exit(2)
@@ -3079,7 +3079,7 @@ def cmd_log(conn, a) -> None:
     project = _resolve_project(a.project)
     if getattr(a, "reindex", False):
         # Re-derive `content` from the preserved `raw` for turns already on disk. Because raw was
-        # always kept in full, action lines can be recovered for the ENTIRE history — the feature
+        # always kept in full, action lines can be recovered for the ENTIRE history - the feature
         # doesn't start empty on a store with 44k turns behind it. Only ADDS extracted text; a turn
         # whose re-extraction yields nothing keeps whatever it had.
         n, changed = 0, 0
@@ -3143,7 +3143,7 @@ _DECISION_CUES = (
     "we are using", "let's do", "lets do", "agreed on", "final call",
 )
 
-# Open-loop / next-action cues — distinct from decisions. The recency TAIL honors these too, so a
+# Open-loop / next-action cues - distinct from decisions. The recency TAIL honors these too, so a
 # mid-task /clear still surfaces where we left off ("pick this up later", "the next step is …",
 # "still need to …"). The 'safe to clear?' nudge (_uncaptured_count) deliberately does NOT use them:
 # it counts real decisions, not every open loop, or it would nag on ordinary work-in-progress. Phrase-
@@ -3158,7 +3158,7 @@ _OPENTASK_CUES = (
 )
 
 # The agent's OWN process/meta narration trips the cue list ("let me close the loop by
-# capturing…", "next I'll switch to the tests") — these are workflow chatter, not project
+# capturing…", "next I'll switch to the tests") - these are workflow chatter, not project
 # decisions, and they inflate the "to capture" nudge (#197). A snippet dominated by a marker
 # below is treated as narration and dropped from the clear-readiness signal. Kept deliberately
 # specific to capture-talk and task-sequencing so it can't swallow a real decision an assistant
@@ -3174,7 +3174,7 @@ _NARRATION_MARKERS = (
 
 # Exemplar decisions for SEMANTIC candidate recall in `review`. A cue-less but real decision
 # ("the free tier caps at 500 records and Pro unlocks the reranker") carries no trigger word, so
-# the keyword detector misses it and `review` falsely reports "safe to clear" (#200 — the
+# the keyword detector misses it and `review` falsely reports "safe to clear" (#200 - the
 # trust-critical failure, since the high-value rationale is exactly what's lost on /clear). When an
 # embedder is present, `review` also flags any turn whose sentence reads semantically like one of
 # these, biasing toward surfacing over silence (#143).
@@ -3194,7 +3194,7 @@ _DECISION_SEM_FLOOR = 0.45
 # Captured-check threshold (cosine), calibrated empirically for the default static embedder
 # (potion-base-8M): a genuine paraphrase scores ~0.50, an unrelated decision ~0.18. Sit just below
 # the paraphrase band so real restatements read as captured while unrelated decisions get flagged.
-# It stays a heuristic — the output hedges ("appear to", "glance at anything critical") rather than
+# It stays a heuristic - the output hedges ("appear to", "glance at anything critical") rather than
 # promising safety, and precision improves with the stronger embedder on the roadmap. When torn,
 # bias toward flagging (a harmless nudge) over a false "captured" (a silently dropped decision; #143).
 _CAPTURED_SIM = 0.45
@@ -3240,7 +3240,7 @@ def _looks_like_narration(snippet):
     (#197). Drops it from the clear-readiness signal so 'to capture' counts real decisions only."""
     s = (snippet or "").lstrip()
     # Action lines are a record of WORK, not a decision to capture. They're searchable via
-    # `recall --log`, but they must never inflate the "to capture" nudge — the counter's precision is
+    # `recall --log`, but they must never inflate the "to capture" nudge - the counter's precision is
     # the whole reason it's trusted (#219, #747).
     if s.startswith(_ACTION_PREFIXES):
         return True
@@ -3280,19 +3280,19 @@ def _max_similarity(conn, project, text, fn):
     return max(_cosine(qv, _blob_vec(r["vec"])) for r in rows)
 
 
-_UNSET = object()   # "caller didn't supply an embedder" — distinct from an explicit None ("lexical only")
+_UNSET = object()   # "caller didn't supply an embedder" - distinct from an explicit None ("lexical only")
 
 # Per-SNIPPET semantic verdict cache. The count-level memo alone isn't enough: its fingerprint includes
 # the newest log row, and a new row lands every single turn, so on a project with a live nag the first
 # status refresh after each turn paid a full ~1.2s model load. A verdict about "is THIS snippet already
-# curated?" only goes stale when the CURATED side changes — new log turns are irrelevant to it. So this
+# curated?" only goes stale when the CURATED side changes - new log turns are irrelevant to it. So this
 # is keyed on curated state alone, which means the embedder loads once per genuinely new decision, not
 # once per turn. Bounded and stored as one small meta row; a curation change drops the whole map.
 _SEM_VERDICT_CAP = 96
 
 
 def _curated_state_key(conn, project):
-    """Fingerprint of the CURATED side only — what a captured-verdict actually depends on."""
+    """Fingerprint of the CURATED side only - what a captured-verdict actually depends on."""
     row = conn.execute(
         "SELECT MAX(ts), COUNT(*) FROM memories WHERE project=? AND status='active'",
         (project,)).fetchone()
@@ -3304,7 +3304,7 @@ def _snippet_key(snippet):
 
 
 def _semantic_verdict_get(conn, project, snippet):
-    """(verdict, state) — verdict is None on a miss. `state` is handed back so the caller can store
+    """(verdict, state) - verdict is None on a miss. `state` is handed back so the caller can store
     under the same fingerprint it read, without recomputing it."""
     try:
         state = _curated_state_key(conn, project)
@@ -3340,11 +3340,11 @@ def _semantic_verdict_put(conn, project, snippet, verdict, state):
 
 def _is_captured(conn, project, snippet, fn=_UNSET):
     """THE definition of "this decision is already in curated memory". Every clear-readiness surface
-    (status bar, minder nudge, boot tail, `review`) must route through here — they used to each pick
+    (status bar, minder nudge, boot tail, `review`) must route through here - they used to each pick
     their own check, and on a host WITH an embedder that split into two different answers: `review`
     scored a paraphrase as captured (cosine >= _CAPTURED_SIM) while the bar, hard-wired to the lexical
     check, kept counting it forever. Curating a decision in your own words then never cleared the
-    nudge, so the counter looked stale and cried wolf — the exact trust the clear-safe signal is for
+    nudge, so the counter looked stale and cried wolf - the exact trust the clear-safe signal is for
     (#219, #747).
 
     Evidence is a UNION: strong word overlap OR semantic match, but only among capture-eligible
@@ -3354,11 +3354,11 @@ def _is_captured(conn, project, snippet, fn=_UNSET):
 
     Tiered on purpose: the lexical pass is free and runs first, so a project that's already clear-safe
     never pays for a model load. Only a snippet that lexical would NAG about escalates to the embedder
-    — cost lands exactly where it buys precision. Pass `fn` if you've already resolved an embedder;
+    - cost lands exactly where it buys precision. Pass `fn` if you've already resolved an embedder;
     pass None to force pure-lexical."""
     if _lexical_overlap_captured(conn, project, snippet):
         return True
-    # Consult the verdict cache BEFORE resolving an embedder — resolving is what costs ~1s, so a
+    # Consult the verdict cache BEFORE resolving an embedder - resolving is what costs ~1s, so a
     # lookup after it would save nothing.
     cached, state = _semantic_verdict_get(conn, project, snippet)
     if cached is not None:
@@ -3392,7 +3392,7 @@ def _lexical_overlap_captured(conn, project, snippet):
 def cmd_review(conn, a) -> None:
     """Coverage check before a /clear: surface recent decisions from the transcript log that don't
     appear to be in curated memory yet, so nothing important is lost when you clear. Heuristic and
-    deliberately honest — it flags candidates for you (or your agent) to confirm, and never claims a
+    deliberately honest - it flags candidates for you (or your agent) to confirm, and never claims a
     'safe' it cannot verify (a false 'captured' would silently drop a decision; see #143)."""
     project = _resolve_project(a.project)
     total_log = conn.execute("SELECT COUNT(*) FROM log WHERE project = ?", (project,)).fetchone()[0]
@@ -3400,12 +3400,12 @@ def cmd_review(conn, a) -> None:
                            (project,)).fetchone()[0]
     print(f"review · project={project}")
     if not total_log:
-        print("  no transcript log yet — nothing to check. "
+        print("  no transcript log yet - nothing to check. "
               "(the Stop hook captures turns as you work, then `review` can vet them.)")
         return
     # Same hybrid window the automatic surfaces use: the lean recent `-k` turns, extended back to the
     # last capture so a decision buried under a long verification tail is still in scope. A flat
-    # last-k window here was half of why the status bar and `review` disagreed — the bar could count a
+    # last-k window here was half of why the status bar and `review` disagreed - the bar could count a
     # turn `review` never looked at (#747).
     floor = _capture_floor(conn, project)
     scanned = conn.execute(
@@ -3430,7 +3430,7 @@ def cmd_review(conn, a) -> None:
             snip = _decision_snippet(r["content"])
             if _looks_like_narration(snip):          # agent's own process chatter, not a decision (#197)
                 snip = None
-        if snip is None and fn:                      # no cue word — does it READ like a decision? (#200)
+        if snip is None and fn:                      # no cue word - does it READ like a decision? (#200)
             snip = _semantic_decision_snippet(r["content"], fn, exemplar_vecs)
         if not snip:
             continue
@@ -3440,26 +3440,26 @@ def cmd_review(conn, a) -> None:
         seen.add(key)
         candidates.append((r["ts"], snip))
     if not candidates:
-        print("  no decision-signal language in the scanned turns — nothing obvious to capture. "
+        print("  no decision-signal language in the scanned turns - nothing obvious to capture. "
               "(heuristic, not proof: eyeball anything you know was important.)")
         return
 
-    # Shared captured-check — `fn` is passed explicitly (possibly None) so review uses exactly the
+    # Shared captured-check - `fn` is passed explicitly (possibly None) so review uses exactly the
     # embedder it resolved above, and the bar's lazy resolution can't diverge from it.
     uncaptured = [(ts, snip) for ts, snip in candidates if not _is_captured(conn, project, snip, fn)]
     print(f"  {len(candidates)} decision-signal turn(s) detected; "
           f"{len(candidates) - len(uncaptured)} look captured, {len(uncaptured)} may not be.")
     if not uncaptured:
-        print("\n✓ recent decisions appear to be in curated memory — looks safe to clear. "
+        print("\n✓ recent decisions appear to be in curated memory: looks safe to clear. "
               "(capture-check is heuristic; glance at anything critical first.)")
         return
-    print("\n⚠ these recent decisions don't clearly appear in curated memory — capture before you clear?\n")
+    print("\n⚠ these recent decisions don't clearly appear in curated memory: capture before you clear?\n")
     for ts, snip in uncaptured:
         print(f"  · [{ts[:16]}] {snip[:160]}")
     print("\n  capture with:  engrim add -t decision -s \"…\"   (your agent can do this for you)")
     if _is_strict(a):
         sys.stderr.write(
-            f"[engrim] {len(uncaptured)} uncaptured decision(s) detected in {project} — "
+            f"[engrim] {len(uncaptured)} uncaptured decision(s) detected in {project} - "
             "capture with `engrim add` before clearing\n"
         )
         sys.exit(2)
@@ -3545,7 +3545,7 @@ def cmd_embed(conn, a) -> None:
     project = _resolve_project(a.project)
     fn, name = _resolve_embedder()
     if not fn:
-        print("embed: semantic recall is off (ENGRIM_EMBED=off, or model2vec unavailable) — "
+        print("embed: semantic recall is off (ENGRIM_EMBED=off, or model2vec unavailable) - "
               "the minder stays lexical until a backend is available")
         return
     rows = conn.execute(
@@ -3762,7 +3762,7 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             "environment:\n"
             "  ENGRIM_DB       path to the SQLite store (default ~/.engrim/memory.db)\n"
-            "  ENGRIM_PROJECT  stable project tag — set this to share one project's memory\n"
+            "  ENGRIM_PROJECT  stable project tag - set this to share one project's memory\n"
             "                  across host + Docker containers (host path != container path)\n\n"
             "project-tag precedence:  --project  >  $ENGRIM_PROJECT  >  git root of cwd  >  cwd"
         ),
@@ -4022,7 +4022,7 @@ def build_parser() -> argparse.ArgumentParser:
     pdoc.add_argument("--json", action="store_true", help="output doctor diagnostics as JSON")
     pdoc.set_defaults(func=cmd_doctor)
 
-    # engrim ent — Enterprise In-VPC Substrate Bridge
+    # engrim ent - Enterprise In-VPC Substrate Bridge
     pent = sub.add_parser("ent", help="Engrim Enterprise In-VPC Substrate & Autonomous Directive Runner")
     pent.add_argument("ask", nargs="*", default=[],
                       help="Directive or task prompt to execute in Engrim Enterprise prod")
@@ -4052,7 +4052,7 @@ def cmd_serve(conn, a) -> None:
 
 
 def main(argv=None) -> None:
-    # Windows defaults the std streams to cp1252 the moment they aren't a console — and Claude Code
+    # Windows defaults the std streams to cp1252 the moment they aren't a console - and Claude Code
     # drives every hook and the status line through pipes. Two live failures came out of that:
     # `statusline`/`context`/`stats` died with UnicodeEncodeError on the bar's leading 🧠, and stdin
     # decoding broke the hooks that read a JSON payload (any emoji or smart quote in a prompt).
@@ -4062,7 +4062,7 @@ def main(argv=None) -> None:
         try:
             stream.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
-            pass                       # not a TextIOWrapper (captured/redirected in-process) — fine
+            pass                       # not a TextIOWrapper (captured/redirected in-process) - fine
     parser = build_parser()
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):

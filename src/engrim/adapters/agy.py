@@ -131,7 +131,7 @@ def handle_stop(
     is_strict = strict or os.environ.get("ENGRIM_STRICT", "").strip().lower() in ("1", "true", "yes", "on") or \
                 os.environ.get("ENGRIM_GATE", "").strip().lower() in ("1", "true", "yes", "on")
     if is_strict and unc > 0:
-        sys.stderr.write(f"[engrim] blocked stop: {unc} uncaptured decision(s) detected in {project} — capture with `engrim add` before stopping\n")
+        sys.stderr.write(f"[engrim] blocked stop: {unc} uncaptured decision(s) detected in {project} - capture with `engrim add` before stopping\n")
         sys.exit(2)
 
     out: dict = {}

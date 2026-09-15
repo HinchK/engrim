@@ -1,4 +1,4 @@
-// engrim — cross-agent project memory for OpenCode. Written by `engrim setup --opencode`.
+// engrim - cross-agent project memory for OpenCode. Written by `engrim setup --opencode`.
 // Re-run `engrim setup --opencode` after upgrading engrim; `engrim uninstall --opencode` removes it.
 import { spawn } from "node:child_process"
 
@@ -19,7 +19,7 @@ const spawnEngrim = (args, opts) => /\.(cmd|bat)$/i.test(ENGRIM)
   : spawn(ENGRIM, args, opts)
 
 // Resolves to { ok, out }: ok is false when the process could not be spawned, timed out, or exited
-// non-zero — callers must not treat that as "engrim saw this" (see flush).
+// non-zero - callers must not treat that as "engrim saw this" (see flush).
 function run(event, payload, timeoutMs = 20000) {
   return new Promise((resolve) => {
     let out = ""

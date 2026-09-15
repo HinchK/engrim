@@ -20,7 +20,7 @@ AGENTS_MD = (_FILES / "AGENTS.md").read_text(encoding="utf-8")
 
 # The plugin OpenCode loads (plugin.js next to this file). `__ENGRIM_BIN__` and `__ENGRIM_USAGE__`
 # are filled in by render_plugin at setup time, so the plugin depends on neither OpenCode's PATH nor
-# a second copy of the usage text. Plain JS + node:child_process — Bun runs it as-is, nothing to build.
+# a second copy of the usage text. Plain JS + node:child_process - Bun runs it as-is, nothing to build.
 PLUGIN_JS = (_FILES / "plugin.js").read_text(encoding="utf-8")
 
 
@@ -102,7 +102,7 @@ def setup(engrim_bin: str, dry_run: bool = False) -> None:
         print(f"✓ registered MCP server in {cfg_path}")
     jsonc = os.path.join(cfg_dir, "opencode.jsonc")
     if cfg_path.endswith(".json") and os.path.exists(jsonc):
-        print(f"• {jsonc} also exists — OpenCode reads both; the MCP entry went into opencode.json")
+        print(f"• {jsonc} also exists - OpenCode reads both; the MCP entry went into opencode.json")
 
     existing = ""
     if os.path.exists(agents_md):
@@ -140,7 +140,7 @@ def uninstall(dry_run: bool = False) -> None:
             with open(cfg_path, encoding="utf-8") as f:
                 cfg = json.load(f)
         except Exception:
-            print(f"• {cfg_path} isn't strict JSON — remove the mcp.engrim entry by hand if present")
+            print(f"• {cfg_path} isn't strict JSON - remove the mcp.engrim entry by hand if present")
             continue
         servers = cfg.get("mcp") if isinstance(cfg, dict) else None
         if isinstance(servers, dict) and "engrim" in servers:
