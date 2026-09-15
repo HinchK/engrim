@@ -1,6 +1,6 @@
 name: Publish to PyPI
 
-# Trusted Publishing (OIDC) — no API token/secret. PyPI is configured to trust
+# Trusted Publishing (OIDC): no API token/secret. PyPI is configured to trust
 # this repo's `release.yml` workflow; publishing a GitHub Release builds the
 # artifacts and uploads them via a short-lived OIDC token.
 on:

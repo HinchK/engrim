@@ -37,7 +37,7 @@ jobs:
         run: |
           engrim --help
           engrim add -p /ci -t fact -s "ci smoke" && engrim recall -p /ci -q "ci smoke"
-      # Every one of these is piped here, exactly as Claude Code pipes them — which is the condition
+      # Every one of these is piped here, exactly as Claude Code pipes them - which is the condition
       # that made them crash on Windows while looking perfect in a terminal.
       - name: Smoke-test the piped commands (status line, boot pack, minder)
         run: |

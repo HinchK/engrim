@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "engrim"
 dynamic = ["version"]
-description = "Project-scoped, cross-session episodic memory for AI coding agents (Google Antigravity, Claude Code, Cursor MCP) — local SQLite hybrid keyword+semantic store."
+description = "Project-scoped, cross-session episodic memory for AI coding agents (Google Antigravity, Claude Code, Cursor MCP) - local SQLite hybrid keyword+semantic store."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
