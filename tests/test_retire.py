@@ -1,4 +1,4 @@
-"""Tests for `engrim retire` — marking the active resume-pointer(s) done."""
+"""Tests for `engrim retire` - marking the active resume-pointer(s) done."""
 import json
 import sqlite3
 
@@ -76,7 +76,7 @@ def test_retire_dry_run_lists_but_writes_nothing(tmp_path, capsys):
 
 
 def test_retire_matches_the_tag_not_the_words(tmp_path):
-    """Only a record TAGGED resume-pointer is a pointer — the same test the boot pack applies. A
+    """Only a record TAGGED resume-pointer is a pointer - the same test the boot pack applies. A
     record that merely mentions the phrase, or carries a tag that contains it, is not."""
     db = tmp_path / "m.db"
     _add(db, "decided to add a resume-pointer before every clear", type_="decision")

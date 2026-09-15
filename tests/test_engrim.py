@@ -1,4 +1,4 @@
-"""Real test suite for engrim — exercises the installed package end to end."""
+"""Real test suite for engrim - exercises the installed package end to end."""
 import json
 import sqlite3
 
@@ -126,11 +126,11 @@ def test_claude_dir_anchors_non_git_workspace(tmp_path, monkeypatch):
     """A non-repo workspace (no .git) marked by a .claude dir anchors from any subdir to that root.
 
     This is the edge case that bit in the field: launching from `proj/backend` filed records under
-    the `proj/backend` SIBLING scope while the status line read `proj` — so the count never moved and
+    the `proj/backend` SIBLING scope while the status line read `proj` - so the count never moved and
     logging *looked* dead though writes were landing. A .claude dir makes the non-repo root anchor."""
     import os
     proj = tmp_path / "workspace"
-    (proj / ".claude").mkdir(parents=True)            # no .git here — pure Claude Code workspace
+    (proj / ".claude").mkdir(parents=True)            # no .git here - pure Claude Code workspace
     sub = proj / "backend" / "discovery"
     sub.mkdir(parents=True)
     db = tmp_path / "m.db"
@@ -162,7 +162,7 @@ def test_git_wins_over_nested_claude_marker(tmp_path, monkeypatch):
 
 def test_home_claude_never_becomes_catch_all_anchor(tmp_path, monkeypatch):
     """`~/.claude` must NOT anchor: a non-repo dir under a HOME that has ~/.claude tags to the cwd
-    itself, not to HOME — otherwise every loose project under home collapses into one bucket."""
+    itself, not to HOME - otherwise every loose project under home collapses into one bucket."""
     import os
     home = tmp_path / "home"
     (home / ".claude").mkdir(parents=True)            # the global ~/.claude
@@ -187,7 +187,7 @@ def test_marker_walk_never_climbs_past_home(tmp_path, monkeypatch):
     found the developer's own `~/.claude`. Same input, different answer per machine."""
     import os
     above = tmp_path / "above"
-    (above / ".git").mkdir(parents=True)              # a repo ABOVE home — must stay invisible
+    (above / ".git").mkdir(parents=True)              # a repo ABOVE home - must stay invisible
     home = above / "home"
     home.mkdir()
     loose = home / "loose_project"                    # no marker of its own
@@ -316,7 +316,7 @@ def test_global_does_not_pull_other_projects_records(tmp_path, capsys):
 
 
 def test_global_opt_out_with_env(tmp_path, capsys, monkeypatch):
-    """ENGRIM_NO_GLOBAL fully disables the layer — behavior is exactly as before the feature."""
+    """ENGRIM_NO_GLOBAL fully disables the layer - behavior is exactly as before the feature."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "--global", "-t", "user", "-s", "global only record"])
     monkeypatch.setenv("ENGRIM_NO_GLOBAL", "1")
@@ -346,7 +346,7 @@ def test_global_layer_read_in_isolation(tmp_path, capsys):
 
 def test_semantic_floor_admits_paraphrase_near_match(tmp_path, capsys, monkeypatch):
     """A genuine paraphrase scoring in the 0.30-0.35 band (above noise, below the old 0.35 floor) must
-    still be recalled. Query and record share no words, so the only path to a hit is semantic — this
+    still be recalled. Query and record share no words, so the only path to a hit is semantic - this
     pins _SEM_FLOOR at 0.30 and guards against silently raising it back."""
     # Fake embedder: record -> [1,0,0]; query -> a vector at cosine 0.32 to it (between 0.30 and 0.35).
     def _fake_embed(text):

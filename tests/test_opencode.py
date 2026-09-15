@@ -234,7 +234,7 @@ def test_opencode_is_a_valid_origin_agent(tmp_path):
 
 def test_stop_hook_exits_nonzero_when_ingest_fails(tmp_path, capsys):
     """The plugin only marks message ids as logged when the stop hook exits 0, so a failed ingest
-    must NOT look like success — neither in-process nor as a real child process."""
+    must NOT look like success - neither in-process nor as a real child process."""
     bad_db = str(tmp_path)   # a directory, not a file: sqlite can't open it
     payload = {"cwd": str(tmp_path), "session_id": "s", "turns": [{"id": "u", "role": "user", "text": "hi"}]}
     with pytest.raises(SystemExit) as ei:
@@ -244,7 +244,7 @@ def test_stop_hook_exits_nonzero_when_ingest_fails(tmp_path, capsys):
 
     # What the plugin actually observes is the child's exit status. With an unopenable db, main()'s
     # own connect() raises before dispatch, so this half proves the CLI-level contract (non-zero exit
-    # on a failed run), not the handle_stop path — that is the in-process assertion above.
+    # on a failed run), not the handle_stop path - that is the in-process assertion above.
     r = subprocess.run([sys.executable, "-c", "from engrim.cli import main; import sys; "
                         "main(['--db', sys.argv[1], 'hook', '--agent', 'opencode', '--event', 'stop'])", bad_db],
                        input=json.dumps(payload), capture_output=True, text=True, timeout=60,

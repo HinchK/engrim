@@ -32,7 +32,7 @@ def test_doctor_terminal_output(capsys, monkeypatch):
         conn.close()
 
         captured = capsys.readouterr().out
-        assert "ENGRIM DOCTOR — DIAGNOSTIC HEALTH CHECK" in captured
+        assert "ENGRIM DOCTOR: DIAGNOSTIC HEALTH CHECK" in captured
         assert "Database & Storage Engine" in captured
         assert "Integrity Check" in captured
         assert "Curated Memories" in captured

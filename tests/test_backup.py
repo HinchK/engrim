@@ -1,4 +1,4 @@
-"""Tests for `engrim backup` — a consistent copy of the store through SQLite's online backup API."""
+"""Tests for `engrim backup` - a consistent copy of the store through SQLite's online backup API."""
 import json
 import os
 import shutil

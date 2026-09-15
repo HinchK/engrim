@@ -1,4 +1,4 @@
-"""Cross-platform regression tests — the failures a Linux/macOS dev never sees.
+"""Cross-platform regression tests - the failures a Linux/macOS dev never sees.
 
 Every case here was a real Windows bug found on a fresh install, and every one of them was SILENT:
 setup printed green checkmarks while wiring hooks that could not run, and the piped commands that
@@ -42,7 +42,7 @@ def _commands(cfg):
 # --------------------------------------------------------------------- 1. the unquoted Windows path
 
 def test_setup_writes_hook_paths_the_shell_can_actually_run(tmp_path, monkeypatch):
-    """Raw, `C:\\Users\\...` reaches bash as `C:UserstimgoAppData...` — backslashes eaten as escape
+    """Raw, `C:\\Users\\...` reaches bash as `C:UserstimgoAppData...` - backslashes eaten as escape
     sequences, command not found, and `2>/dev/null || true` swallows the error. Silent no-op."""
     _, cfg = _run_setup(tmp_path, monkeypatch)
     cmds = _commands(cfg) + [cfg["statusLine"]["command"]]
@@ -63,7 +63,7 @@ def test_setup_quotes_posix_paths_with_spaces(tmp_path, monkeypatch):
 
 def test_setup_does_not_duplicate_hooks_on_windows(tmp_path, monkeypatch):
     """setup is documented idempotent. The marker `engrim hook` never matched `engrim.EXE hook`,
-    so on Windows every run appended another hook group — four more on every invocation."""
+    so on Windows every run appended another hook group - four more on every invocation."""
     _, first = _run_setup(tmp_path, monkeypatch)
     _, second = _run_setup(tmp_path, monkeypatch)
     for event in first["hooks"]:
@@ -87,7 +87,7 @@ def test_setup_recognises_hooks_written_before_the_quoting_fix(tmp_path, monkeyp
 
 
 def test_setup_leaves_an_existing_engrim_status_line_alone(tmp_path, monkeypatch):
-    """Same normalisation, applied to the status line — a Windows-spelled one must be recognised."""
+    """Same normalisation, applied to the status line - a Windows-spelled one must be recognised."""
     settings = tmp_path / "settings.json"
     settings.write_text(json.dumps(
         {"statusLine": {"type": "command", "command": f'"{WIN_BIN}" statusline'}}), encoding="utf-8")
@@ -132,7 +132,7 @@ def test_hook_payload_decodes_when_stdin_is_not_utf8(tmp_path, monkeypatch):
     the decode failure and emits an empty block, so the minder just silently injected nothing.
 
     The Cyrillic capital is deliberate: it encodes to D0 90, and 0x90 is one of the few bytes cp1252
-    genuinely refuses. Most UTF-8 sneaks through that codec as mojibake instead — quieter, and it
+    genuinely refuses. Most UTF-8 sneaks through that codec as mojibake instead - quieter, and it
     corrupts the prompt the ranking runs on, which is why the encoding is asserted directly too."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact",
@@ -178,14 +178,14 @@ def test_setup_fails_loudly_when_the_wired_binary_cannot_run(tmp_path, monkeypat
     out = capsys.readouterr()
     assert "NOT done" in str(exc.value)
     assert "Done." not in out.out, "the success line must not print over a failed check"
-    # The hooks are still written — a fixed PATH should not also require re-wiring by hand.
+    # The hooks are still written - a fixed PATH should not also require re-wiring by hand.
     assert json.loads(settings.read_text(encoding="utf-8"))["hooks"]
 
 
 def test_setup_flushes_stdout_before_the_failure_gets_the_last_word(tmp_path, monkeypatch):
     """The failure message is meant to be the LAST thing on screen, under the checkmarks. It goes to
     stderr (unbuffered) while the checkmarks go to stdout, which is block-buffered whenever it isn't
-    a terminal — so without an explicit flush the verdict lands FIRST under a pipe. Correct-looking
+    a terminal - so without an explicit flush the verdict lands FIRST under a pipe. Correct-looking
     in a bare terminal, inverted everywhere else: the same shape as the cp1252 bug above."""
     flushed = []
 
@@ -211,7 +211,7 @@ def test_verify_hook_bin_accepts_a_binary_that_runs():
 
 
 def test_verify_hook_bin_reports_why_a_broken_binary_failed(tmp_path):
-    """A missing binary must come back as a reason string, not an exception or a bare False —
+    """A missing binary must come back as a reason string, not an exception or a bare False -
     that string is what setup shows the user, so an empty one is a silent failure again."""
     reason = _REAL_VERIFY(cli._hook_bin(str(tmp_path / "nope" / "engrim")))
     assert isinstance(reason, str) and reason.strip()
@@ -230,7 +230,7 @@ def test_windows_project_tags_converge_on_one_spelling(monkeypatch):
 
 
 def test_posix_project_tags_are_untouched(monkeypatch):
-    """POSIX paths are already the one true spelling — normalising there would silently re-tag
+    """POSIX paths are already the one true spelling - normalising there would silently re-tag
     every existing record in every store in the wild."""
     monkeypatch.setattr(cli.os, "name", "posix")
     for p in ("/home/tim/engrim", "/home/tim/engrim/.", "/Home/Tim/Engrim"):
@@ -238,7 +238,7 @@ def test_posix_project_tags_are_untouched(monkeypatch):
 
 
 def test_explicit_project_tags_are_never_rewritten(tmp_path, monkeypatch):
-    """`-p my-tag` is a user-chosen label, not a path — normalisation must not touch it."""
+    """`-p my-tag` is a user-chosen label, not a path - normalisation must not touch it."""
     monkeypatch.setattr(cli.os, "name", "nt")
     assert cli._resolve_project("My-Tag") == "My-Tag"
     monkeypatch.setenv("ENGRIM_PROJECT", "Team/Shared")

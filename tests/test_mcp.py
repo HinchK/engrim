@@ -1,4 +1,4 @@
-"""MCP stdio server — drives engrim.mcp_server.serve() with a JSON-RPC script and
+"""MCP stdio server - drives engrim.mcp_server.serve() with a JSON-RPC script and
 asserts the responses, with no MCP client or network needed."""
 import io
 import json

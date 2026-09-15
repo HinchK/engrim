@@ -18,9 +18,9 @@ def _md_dir(tmp_path):
     _write(d / "rule.md", "---\ntype: feedback\ndescription: ship only tested code\n---\nbody\n")
     _write(d / "dead.md", "Merged into MEMORY.md. content lives there\n")  # tombstone
     _write(d / "MEMORY.md",
-           "# Hub\n## User\nAlice is staff eng, terse comms only — and this inline section is well "
+           "# Hub\n## User\nAlice is staff eng, terse comms only - and this inline section is well "
            "over the one hundred forty character threshold so it becomes a real record.\n"
-           "## Pointers\n- [x](rule.md) — pointer-only section, should be skipped\n")
+           "## Pointers\n- [x](rule.md) - pointer-only section, should be skipped\n")
     return d
 
 
@@ -120,7 +120,7 @@ def test_log_hook_reads_stdin(tmp_path, monkeypatch):
 def test_log_hook_resolves_project_from_payload_not_process_cwd(tmp_path, monkeypatch):
     """One Claude session is one transcript file; it must land in ONE project bucket even if the hook
     process's cwd drifts (e.g. it inherits a cwd a tool subprocess chdir'd into). The Stop hook must
-    resolve the project from the workspace Claude Code reports in the payload, not os.getcwd() — else
+    resolve the project from the workspace Claude Code reports in the payload, not os.getcwd() - else
     the session forks across buckets, each with its own cursor, and the status line's count freezes."""
     db = tmp_path / "m.db"
     t = _transcript(tmp_path)
@@ -138,7 +138,7 @@ def test_log_hook_resolves_project_from_payload_not_process_cwd(tmp_path, monkey
 
 
 def test_log_ingest_cursor_advances_to_eof_and_is_stable(tmp_path):
-    """The byte-offset cursor advances to true EOF, and a re-run on the unchanged file holds there —
+    """The byte-offset cursor advances to true EOF, and a re-run on the unchanged file holds there -
     no re-reading old ground, no duplicate rows. (The monotonic guard additionally protects a
     concurrent run from rewinding it; that path needs real concurrency and is covered by reasoning.)"""
     db = tmp_path / "m.db"
@@ -180,7 +180,7 @@ def test_minder_silent_on_trivial_prompt(tmp_path, capsys, monkeypatch):
 
 def test_minder_nudges_curation_when_backlog_builds(tmp_path, capsys, monkeypatch):
     """Mid-session backstop: once uncaptured decisions cross the floor, the minder appends an auto-curate
-    directive to the AGENT — even when no memory slice is relevant to the prompt (so it never gets lost)."""
+    directive to the AGENT - even when no memory slice is relevant to the prompt (so it never gets lost)."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "seed to init schema"])
     for d in ["We decided to use Kafka for the billing pipeline.",
@@ -197,7 +197,7 @@ def test_minder_nudges_curation_when_backlog_builds(tmp_path, capsys, monkeypatc
 
 
 def test_minder_no_curation_nudge_below_floor(tmp_path, capsys, monkeypatch):
-    """A small backlog (under the floor) must NOT trip the curation nudge — no nagging on ordinary work."""
+    """A small backlog (under the floor) must NOT trip the curation nudge - no nagging on ordinary work."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "seed to init schema"])
     _insert_log(str(db), "/p", "We decided to use Kafka for the billing pipeline.")
@@ -260,7 +260,7 @@ def test_add_auto_embeds_and_embed_is_idempotent(tmp_path, capsys, monkeypatch):
     monkeypatch.setattr("engrim.cli._EMBEDDER_OVERRIDE", (_fake_embed, "test-embed"))
     main(["--db", str(db), "add", "-p", "/p", "-t", "decision", "-s", "chose postgres for billing"])
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "office plants need water"])
-    # `add` auto-embeds, so both records already carry vectors — no manual embed step required.
+    # `add` auto-embeds, so both records already carry vectors - no manual embed step required.
     assert sqlite3.connect(db).execute("SELECT COUNT(*) FROM embedding").fetchone()[0] == 2
     capsys.readouterr()
     main(["--db", str(db), "embed", "-p", "/p"])               # backfill is idempotent: nothing new
@@ -361,11 +361,11 @@ def test_review_semantic_capture_check(tmp_path, capsys, monkeypatch):
 
 def test_review_ignores_agent_narration(tmp_path, capsys):
     """#197: the agent's OWN process chatter carries cue words ('close the loop … capture this',
-    'next I'll switch to …') but is not a project decision — it must not be flagged to capture."""
+    'next I'll switch to …') but is not a project decision - it must not be flagged to capture."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "seed"])
     _insert_log(str(db), "/p",
-                "Let me close the loop here — the decision is to capture this, so I'll go with adding a record now.")
+                "Let me close the loop here - the decision is to capture this, so I'll go with adding a record now.")
     _insert_log(str(db), "/p", "Next I'll switch to wiring up the tests.", ts="2026-06-20T09:05:00")
     capsys.readouterr()
     main(["--db", str(db), "review", "-p", "/p"])
@@ -418,7 +418,7 @@ def test_context_recent_tail_dedupes_captured_decision(tmp_path, capsys):
 def test_hook_emits_autocurate_directive_for_uncaptured_decision(tmp_path, capsys):
     """A hard window-close/limit-expiry can't curate itself, but the raw log survives. The NEXT
     session's `engrim hook` injects an AUTO-CURATE directive telling the agent to promote the
-    uncaptured decisions — zero user interaction. Manual `context` keeps the human-facing nudge."""
+    uncaptured decisions - zero user interaction. Manual `context` keeps the human-facing nudge."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "office plants need weekly water"])
     _insert_log(str(db), "/p", "We decided to migrate the billing service to Kafka for throughput.")
@@ -426,7 +426,7 @@ def test_hook_emits_autocurate_directive_for_uncaptured_decision(tmp_path, capsy
     main(["--db", str(db), "hook", "--no-sync", "-p", "/p"])
     boot = json.loads(capsys.readouterr().out.strip())["hookSpecificOutput"]["additionalContext"]
     assert "AUTO-CURATE" in boot and "engrim review" in boot
-    # the manual `context` path must NOT emit the agent directive — it keeps the gentle human nudge
+    # the manual `context` path must NOT emit the agent directive - it keeps the gentle human nudge
     capsys.readouterr()
     main(["--db", str(db), "context", "-p", "/p"])
     manual = capsys.readouterr().out
@@ -447,7 +447,7 @@ def test_hook_no_autocurate_directive_when_captured(tmp_path, capsys):
 
 
 def test_hook_no_autocurate_directive_for_pure_open_task(tmp_path, capsys):
-    """A pure open-loop (continuity cue, no decision) must NOT trip the directive — it surfaces in the
+    """A pure open-loop (continuity cue, no decision) must NOT trip the directive - it surfaces in the
     recency tail for continuity, but engrim won't tell the agent to curate ordinary work-in-progress."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "seed"])
@@ -465,7 +465,7 @@ def test_context_pins_resume_cursor_first_and_untruncated(tmp_path, capsys):
     so a fresh session after /clear opens on exactly where we left off."""
     db = tmp_path / "m.db"
     # a long cursor summary (> _BOOT_SUMMARY_CAP) with a unique sentinel at the very end
-    long_cursor = ("RESUME HERE: next action is discovery pass #3 — gate HMDA denominators, "
+    long_cursor = ("RESUME HERE: next action is discovery pass #3 - gate HMDA denominators, "
                    "winsorize small-county ratios, add RUCC, then run leave-one-state-out. " * 3
                    + "TAILSENTINEL_XYZ")
     assert len(long_cursor) > 200
@@ -503,7 +503,7 @@ def test_recent_tail_surfaces_open_task_cue(tmp_path, capsys):
 
 
 def test_open_task_cue_does_not_inflate_clear_nudge(tmp_path, capsys):
-    """The 'safe to clear?' nudge counts real decisions only — a pure open loop must NOT trip it,
+    """The 'safe to clear?' nudge counts real decisions only - a pure open loop must NOT trip it,
     or engrim would nag on ordinary work-in-progress."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "seed"])
@@ -564,7 +564,7 @@ def test_statusline_flags_uncaptured_for_clear(tmp_path, capsys, monkeypatch):
 
 
 def test_statusline_narration_does_not_trip_capture_nudge(tmp_path, capsys, monkeypatch):
-    """#197: agent meta-narration in the log must not inflate the live 'to capture' nudge — with no
+    """#197: agent meta-narration in the log must not inflate the live 'to capture' nudge - with no
     real uncaptured decision the bar reads clear-safe, model-free."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "seed record"])
@@ -581,10 +581,10 @@ def test_statusline_narration_does_not_trip_capture_nudge(tmp_path, capsys, monk
 #
 # The bug: on a host WITH an embedder, `review` scored a paraphrase as captured while the status bar
 # and the minder's auto-curate nudge were hard-wired to the LEXICAL check and kept counting it. So
-# curating a decision in your own words never cleared the nudge — it just accumulated and cried wolf.
+# curating a decision in your own words never cleared the nudge - it just accumulated and cried wolf.
 
 def _backdate_records(db, ts):
-    """Age the curated records so the capture floor sits BEHIND the log turns — i.e. the decisions
+    """Age the curated records so the capture floor sits BEHIND the log turns - i.e. the decisions
     were logged after the last `add`, which is the situation the recency net exists for."""
     con = sqlite3.connect(db)
     con.execute("UPDATE memories SET ts = ?", (ts,))
@@ -616,7 +616,7 @@ def test_paraphrased_capture_clears_the_bar_not_just_review(tmp_path, monkeypatc
 
     conn = cli.connect(str(db))
     snip = "We decided to migrate the billing service to Kafka."
-    # the paraphrase does NOT clear the lexical bar — semantics are the only thing that can catch it
+    # the paraphrase does NOT clear the lexical bar - semantics are the only thing that can catch it
     assert not cli._lexical_overlap_captured(conn, "/p", snip)
     assert cli._is_captured(conn, "/p", snip)
     assert cli._uncaptured_count(conn, "/p") == 0        # pre-fix this was 1, forever
@@ -644,7 +644,7 @@ def test_bar_and_review_agree_on_the_same_db(tmp_path, capsys, monkeypatch):
 
 
 def test_uncaptured_memo_invalidates_when_the_store_changes(tmp_path):
-    """The count is memoized for the status bar's sake — it must still drop the moment the decision
+    """The count is memoized for the status bar's sake - it must still drop the moment the decision
     is curated, or we've just cached the wolf-crying."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "seed record"])
@@ -727,7 +727,7 @@ def test_curate_directives_ask_for_measurements_not_conclusions(tmp_path, capsys
 
 def test_semantic_verdict_survives_new_log_turns(tmp_path, monkeypatch):
     """A new log row lands EVERY turn. A verdict about "is this snippet curated?" depends only on the
-    curated side, so turns must not invalidate it — otherwise the status bar pays a full model load
+    curated side, so turns must not invalidate it - otherwise the status bar pays a full model load
     once per turn for the whole session (measured at ~1.2s before this cache existed)."""
     calls = []
     base = _concept_embedder()
@@ -742,7 +742,7 @@ def test_semantic_verdict_survives_new_log_turns(tmp_path, monkeypatch):
     after_first = len(calls)
     assert after_first > 0, "the semantic tier should have run for an unmatched snippet"
 
-    for i in range(3):                      # ordinary turns, no decision cue — i.e. most of a session
+    for i in range(3):                      # ordinary turns, no decision cue - i.e. most of a session
         _insert_log(str(db), "/p", f"Ran the suite for pass {i} and read the output.",
                     ts=f"2026-06-20T10:0{i}:00")
         conn = cli.connect(str(db))
@@ -790,7 +790,7 @@ def test_state_changing_tool_calls_become_searchable_action_lines(tmp_path):
 
 
 def test_investigation_is_not_logged_as_an_action(tmp_path):
-    """Greps and reads are how you FIND things, not what you did — including them buried the signal."""
+    """Greps and reads are how you FIND things, not what you did - including them buried the signal."""
     db = tmp_path / "m.db"
     t = _tool_turn(tmp_path,
                    {"type": "tool_use", "name": "Read", "input": {"file_path": "/repo/src/cli.py"}},
@@ -803,11 +803,11 @@ def test_investigation_is_not_logged_as_an_action(tmp_path):
 
 
 def test_action_lines_do_not_inflate_the_capture_nudge(tmp_path):
-    """Actions are a record of work, not a decision to curate — the counter's precision is the whole
+    """Actions are a record of work, not a decision to curate - the counter's precision is the whole
     reason it's trusted, so they must never trip it."""
     db = tmp_path / "m.db"
     main(["--db", str(db), "add", "-p", "/p", "-t", "fact", "-s", "seed record"])
-    _insert_log(str(db), "/p", "[changed] /repo/src/cli.py\n[ran] Commit the release — git commit -m x")
+    _insert_log(str(db), "/p", "[changed] /repo/src/cli.py\n[ran] Commit the release - git commit -m x")
     conn = cli.connect(str(db))
     assert cli._uncaptured_count(conn, "/p") == 0
 
@@ -826,7 +826,7 @@ def test_recall_log_searches_the_transcript_and_is_opt_in(tmp_path, capsys):
 
 def test_log_reindex_recovers_actions_from_history(tmp_path, capsys):
     """raw was always kept in full, so action lines can be recovered for turns logged before the
-    feature existed — it doesn't start empty on a store with a long history behind it."""
+    feature existed - it doesn't start empty on a store with a long history behind it."""
     db = tmp_path / "m.db"
     t = _tool_turn(tmp_path, {"type": "tool_use", "name": "Edit", "input": {"file_path": "/repo/a.py"}})
     main(["--db", str(db), "log", "--from-transcript", str(t), "-p", "/p"])

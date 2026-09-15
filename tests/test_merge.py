@@ -1,4 +1,4 @@
-"""Tests for `engrim merge` — folding one store's records into another."""
+"""Tests for `engrim merge` - folding one store's records into another."""
 import shutil
 import sqlite3
 

@@ -1,4 +1,4 @@
-"""Tests for `engrim project` — one project tag's counts, scoped like every other read — and
+"""Tests for `engrim project` - one project tag's counts, scoped like every other read - and
 `engrim projects`, the every-project alias."""
 import json
 
