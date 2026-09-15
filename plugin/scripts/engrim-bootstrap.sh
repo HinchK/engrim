@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# engrim plugin bootstrap — runs on SessionStart.
+# engrim plugin bootstrap - runs on SessionStart.
 #
 # Installs the engrim CLI into the plugin's persistent data directory the first
 # time the plugin runs (and again whenever the pinned source changes), so the
@@ -7,7 +7,7 @@
 # plugin a true one-click install: no `pip install` step for the user.
 #
 # It is idempotent and fast on every run after the first. It never fails the
-# session — if python3 is missing or the install errors, it exits 0 and the
+# session - if python3 is missing or the install errors, it exits 0 and the
 # hooks no-op until the next session.
 set -euo pipefail
 
@@ -28,7 +28,7 @@ find_in_venv() {                      # $1 = base name, e.g. engrim / python
 
 BIN="$(find_in_venv engrim)" || BIN=""
 
-# Pin the install source — the published PyPI wheel (fast, no git clone/build).
+# Pin the install source - the published PyPI wheel (fast, no git clone/build).
 # Override with ENGRIM_PLUGIN_SOURCE to track a fork, a branch, a local checkout
 # (-e /path), or a git ref ("git+https://github.com/timgordontg/engrim@<ref>").
 SRC="${ENGRIM_PLUGIN_SOURCE:-engrim==1.4.6}"
@@ -63,13 +63,13 @@ if [ -z "$installed" ]; then
   # `python3` is the POSIX spelling; the Windows installer ships `python` (and a `py` launcher).
   PY="$(command -v python3 || command -v python || true)"
   if [ -z "$PY" ]; then
-    echo "engrim plugin: no uv and no python3 on PATH — skipping; hooks will no-op." >&2
+    echo "engrim plugin: no uv and no python3 on PATH - skipping; hooks will no-op." >&2
     exit 0
   fi
   "$PY" -m venv "$VENV" >/dev/null 2>&1 || "$PY" -m venv --without-pip "$VENV" >/dev/null 2>&1 || true
   VPY="$(find_in_venv python)" || VPY=""
   if [ -z "$VPY" ]; then
-    echo "engrim plugin: could not create a venv — skipping; hooks will no-op." >&2
+    echo "engrim plugin: could not create a venv - skipping; hooks will no-op." >&2
     exit 0
   fi
   if ! "$VPY" -m pip --version >/dev/null 2>&1; then
@@ -86,9 +86,9 @@ if [ -n "$installed" ] && [ -n "$BIN" ]; then
   printf '%s' "$SRC" >"$STAMP"
   # Warm the static embedder once so the first prompt isn't slowed by a cold load.
   "$BIN" stats >/dev/null 2>&1 || true
-  echo "engrim plugin: ready — memory will load at session start and on every prompt." >&2
+  echo "engrim plugin: ready - memory will load at session start and on every prompt." >&2
 else
-  echo "engrim plugin: install failed (need uv, or python3 with pip/ensurepip) — hooks will no-op until the next session." >&2
+  echo "engrim plugin: install failed (need uv, or python3 with pip/ensurepip) - hooks will no-op until the next session." >&2
 fi
 
 exit 0
