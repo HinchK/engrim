@@ -83,6 +83,28 @@ def test_add_then_recall_and_context(tmp_path):
     assert any("retrieval beats" in r["summary"] for r in ctx_res["records"])
 
 
+def test_tool_results_include_structured_content_matching_text(tmp_path):
+    # Tools advertise outputSchema, so strict clients (OpenCode) require
+    # structuredContent alongside the text content.
+    conn = connect(str(tmp_path / "m.db"))
+    resp = _run(conn, [
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {
+            "name": "engrim_add",
+            "arguments": {"type": "fact", "summary": "structured results", "project": "/proj"}}},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+            "name": "engrim_recall",
+            "arguments": {"query": "structured", "project": "/proj"}}},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+            "name": "engrim_context", "arguments": {"project": "/proj"}}},
+        {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {
+            "name": "engrim_review", "arguments": {"project": "/proj"}}},
+    ])
+    for frame in resp:
+        result = frame["result"]
+        assert result["isError"] is False
+        assert result["structuredContent"] == json.loads(result["content"][0]["text"])
+
+
 def test_unknown_tool_and_bad_args_are_in_band_errors(tmp_path):
     conn = connect(str(tmp_path / "m.db"))
     resp = _run(conn, [
@@ -94,6 +116,7 @@ def test_unknown_tool_and_bad_args_are_in_band_errors(tmp_path):
     assert resp[0]["error"]["code"] == -32602                # unknown tool -> JSON-RPC error
     assert resp[1]["result"]["isError"] is True              # bad tool args -> in-band tool error
     assert "type must be one of" in resp[1]["result"]["content"][0]["text"]
+    assert "structuredContent" not in resp[1]["result"]      # in-band errors carry no structured payload
 
 
 def _review(conn, project="/p"):

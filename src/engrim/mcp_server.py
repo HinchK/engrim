@@ -358,7 +358,14 @@ def serve(conn, inp=None, out=None) -> None:
                     text = _tool_add(conn, params.get("arguments") or {}, client_agent=detected_client)
                 else:
                     text = fn(conn, params.get("arguments") or {})
-                _ok(rid, {"content": [{"type": "text", "text": text}], "isError": False})
+                result = {"content": [{"type": "text", "text": text}], "isError": False}
+                try:
+                    parsed = json.loads(text)
+                except ValueError:
+                    parsed = None             # non-JSON text (shouldn't happen) — text content only
+                if isinstance(parsed, dict): # spec: structuredContent must be an object
+                    result["structuredContent"] = parsed
+                _ok(rid, result)
             except Exception as e:         # tool errors are reported in-band, never crash the server
                 _ok(rid, {"content": [{"type": "text", "text": f"error: {e}"}], "isError": True})
         elif rid is not None:
