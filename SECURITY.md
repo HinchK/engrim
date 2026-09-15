@@ -11,11 +11,11 @@ states the security posture plainly and explains how to report anything that loo
   for a no-network, pure-standard-library posture with zero third-party code.
 - **Minimal dependencies.** The core is pure Python standard library. The default semantic tier adds
   `model2vec` and its lightweight runtime deps (numpy, safetensors, tokenizers, huggingface-hub,
-  joblib, tqdm, jinja2) — no torch, no transformers. Lexical mode (`ENGRIM_EMBED=off`) pulls none of
+  joblib, tqdm, jinja2) - no torch, no transformers. Lexical mode (`ENGRIM_EMBED=off`) pulls none of
   them.
 - **No dangerous primitives.** No `eval`, `exec`, `pickle`, `marshal`, `subprocess`, `os.system`,
   or shell execution anywhere in the code.
-- **No unsafe deserialization.** Markdown frontmatter is parsed by hand — engrim does **not** use
+- **No unsafe deserialization.** Markdown frontmatter is parsed by hand - engrim does **not** use
   PyYAML/`yaml.load` or `pickle`, the classic remote-code-execution vectors.
 - **No SQL injection surface.** Every value derived from user input is passed as a bound `?`
   parameter. Full-text queries are tokenized and quoted before they reach SQLite, so search terms
@@ -29,7 +29,7 @@ states the security posture plainly and explains how to report anything that loo
 Records can be surfaced to an AI agent (e.g. via a Claude Code SessionStart hook). Treat imported
 content the way you'd treat anything an agent will read: **only import from sources you trust.**
 A markdown file from an untrusted source could contain text crafted to influence an agent that
-later reads it — the same prompt-injection caution that applies to any document you feed a model.
+later reads it - the same prompt-injection caution that applies to any document you feed a model.
 
 ## Reporting a vulnerability
 
