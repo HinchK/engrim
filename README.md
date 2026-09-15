@@ -20,30 +20,7 @@ A local-first, project-scoped SQLite memory engine that allows developers to fre
 
 **Engrim** is the universal, cross-model episodic memory standard engineered specifically for autonomous AI coding agents and heavy software development.
 
-It solves the **"200,000-token context window trap"**—where coding models suffer from severe attention dilution, compounding per-turn token costs, and the loss of prior architectural decisions whenever a chat session is cleared—by replacing raw transcript replay with **4,000 characters of high-precision, curated episodic working memory** stored in a single, local-first SQLite file (`~/.engrim/memory.db`).
-
-### Why Developers Need Engrim
-
-When developing complex codebases with modern AI agent harnesses, developers inevitably encounter three systemic bottlenecks:
-
-1. **Context Window Inflation & Attention Dilution**: Shoveling 100,000+ tokens of raw conversational history into an LLM on every turn degrades reasoning accuracy, spikes latency, and causes models to hallucinate away critical architectural invariants.
-2. **The Context Reset Bottleneck (`/clear`)**: The moment you clear context to restore model sharpness, your agent's working knowledge resets to zero. You waste valuable time re-explaining system architecture, test rules, and constraints.
-3. **Vendor & Harness Silos**: Decisions made while pairing with Claude Code are completely invisible when switching to Google Antigravity, Cursor, or Codex CLI. Project intelligence remains trapped in proprietary cloud silos.
-
-Engrim eliminates this fragmentation by acting as the **Switzerland of AI Memory**: a vendor-neutral, local SQLite substrate that loads the exact slice of memory your agent needs, right when it needs it.
-
----
-
-### Key Capabilities at a Glance
-
-- 🌐 **Cross-Harness Interoperability**: Seamlessly share memory across Google Antigravity, Claude Code, Cursor, Codex CLI, OpenCode, and Windsurf on the exact same project repository.
-- ⚡ **Sub-1% Context Footprint**: Boots every turn with ~4,000 characters (<1,000 tokens) of priority-ordered active memory, cutting context reloading costs by 99%+.
-- 🔄 **Continue-As-Clear Workflow**: Clear your agent session freely (`/clear`) anytime context drifts. The next turn instantly reloads active decisions, state, and your `[▶ RESUME HERE]` pointer.
-- 🧠 **Zero-Latency Hybrid Retrieval**: Blends SQLite FTS5 (`bm25` keyword search) with static vector embeddings (`model2vec`) on CPU in ~30ms—zero cloud dependencies or GPU requirements.
-- 🩺 **Self-Healing Diagnostics (`engrim doctor`)**: Built-in health audit engine verifies database WAL integrity, semantic vector coverage, and agent hooks with portable PATH fallbacks.
-- 🔒 **100% Local, Offline & Private**: Zero telemetry, zero cloud sync, POSIX `0600` restricted permissions. Your code and architectural decisions never leave your machine.
-
----
+It solves the **"200,000-token context window trap"** (where coding models suffer from severe attention dilution, compounding per-turn token costs, and the loss of prior architectural decisions whenever a chat session is cleared) by replacing raw transcript replay with **4,000 characters of high-precision, curated episodic working memory** stored in a single, local-first SQLite file (`~/.engrim/memory.db`).
 
 ### The Problem vs. The Engrim Standard
 
@@ -57,18 +34,7 @@ Engrim eliminates this fragmentation by acting as the **Switzerland of AI Memory
 
 ---
 
-## 2. Empirical Proof (The 105-Session Case Study)
-
-> **Tested across 105 continuous sessions on a 50,000-line algorithmic trading system. Zero regressions across 186 unit tests, zero context loss across model switches.**
-
-In production testing on an active algorithmic trading codebase running real capital:
-- Over **153,000 tokens of work** across days of architecture, parameter tuning, and debugging was consolidated into an active memory pack under **1,000 tokens** (<1% of the context window).
-- That is a **99%+ cut in reloaded context cost** on every session restart.
-- Seamlessly switched between Google Antigravity CLI, Claude Code, and Cursor MCP on identical repos with zero model drift or architectural regression.
-
----
-
-## 3. Architecture & How It Works (The 10-Second Mental Model)
+## 2. Architecture & How It Works (The 10-Second Mental Model)
 
 ```mermaid
 graph TD
@@ -114,7 +80,7 @@ graph TD
 
 ---
 
-## 4. Multi-Agent Quickstart
+## 3. Multi-Agent Quickstart
 
 ### Installation
 
@@ -156,7 +122,7 @@ engrim doctor --json
 **Real output:**
 ```text
 ================================================================================
-                 🩺 ENGRIM DOCTOR — DIAGNOSTIC HEALTH CHECK                    
+                 🩺 ENGRIM DOCTOR: DIAGNOSTIC HEALTH CHECK                    
 ================================================================================
 Platform   : linux (x86_64) · Python 3.12.3
 Engrim CLI : /home/user/.local/bin/engrim
@@ -252,16 +218,12 @@ OpenCode has no shell hooks, so engrim ships as a plugin plus an MCP server:
 - Registers `mcp.engrim` (`engrim serve --mcp`) in `~/.config/opencode/opencode.json`, exposing `engrim_*` tools to the agent.
 - Appends usage note to `~/.config/opencode/AGENTS.md`.
 
-##### *"OpenCode already has a SQLite database — why add engrim?"*
+###### OpenCode Transcript Store vs. Engrim
 
-It does, and it is good at what it is for. `opencode.db` holds sessions, messages, and parts: it is the **transcript** store for one tool. It has no memory table, no cross-session retrieval the model can call, and nothing outside OpenCode can read it. engrim solves a different problem:
-
-- **Switch harnesses on the same task.** Start in OpenCode, finish in Claude Code, Codex CLI, Cursor, or Antigravity. Every one of them boots from the same `~/.engrim/memory.db`.
-- **Curated memory, not replayed history.** OpenCode's compaction summaries are lossy, regenerated each time, and gone with the session. engrim stores typed records (`decision`, `fact`, `state`, `feedback`, `user`, `reference`) that can be superseded, tagged, and retired.
-- **Survives `/new`, compaction, and deleted sessions.** With engrim the boot pack is injected again on every session and after compaction, and the resume pointer says exactly where to pick up.
-- **Model-driven retrieval.** Hybrid FTS5 + vector recall (`engrim_recall`), a per-prompt minder, and explicit write access (`engrim_add`).
-- **Cross-agent provenance.** Every record carries `origin_agent`, so you know if a constraint came from Codex or OpenCode.
-- **Portable and yours.** One SQLite file you can `engrim backup`, `engrim merge`, and share with `ENGRIM_PROJECT`.
+`opencode.db` stores raw transcripts (sessions, messages, parts) for OpenCode alone. Engrim provides the universal cross-session memory layer:
+- **Cross-Harness Continuity**: Switch between OpenCode, Claude Code, Codex CLI, Cursor, or Antigravity on the same codebase from one `~/.engrim/memory.db`.
+- **Curated Episodic State**: Preserves typed records (`decision`, `fact`, `state`) that survive `/new`, session deletion, and compaction.
+- **Model-Driven Retrieval**: Hybrid FTS5 + vector recall (`engrim_recall`) and per-prompt minding with cross-agent provenance (`origin_agent`).
 
 #### 🐙 GitHub Agentic Workflows (`gh-aw`)
 See [`examples/gh-aw/`](examples/gh-aw/) for engrim inside [GitHub Agentic Workflows](https://github.github.com/gh-aw/): memory across runs through artifacts and `engrim merge`, and a continue-as-clear restart instead of auto-compaction.
@@ -274,6 +236,17 @@ engrim setup --all
 
 ---
 
+## 4. Empirical Proof (The 105-Session Case Study)
+
+> **Tested across 105 continuous sessions on a 50,000-line algorithmic trading system. Zero regressions across 186 unit tests, zero context loss across model switches.**
+
+In production testing on an active algorithmic trading codebase running real capital:
+- Over **153,000 tokens of work** across days of architecture, parameter tuning, and debugging was consolidated into an active memory pack under **1,000 tokens** (<1% of the context window).
+- That is a **99%+ cut in reloaded context cost** on every session restart.
+- Seamlessly switched between Google Antigravity CLI, Claude Code, and Cursor MCP on identical repos with zero model drift or architectural regression.
+
+---
+
 ## 5. Agent Provenance Tracking
 
 When multiple agents collaborate on a single codebase, provenance matters. `engrim` records the origin of every memory entry with the `origin_agent` field:
@@ -282,7 +255,7 @@ When multiple agents collaborate on a single codebase, provenance matters. `engr
 - Subtly surfaced in `engrim context` and `engrim list`:
 
 ```text
-🧠 engrim · memory restored for this project — you don't have to re-explain · /workspace
+🧠 engrim · memory restored for this project: you don't have to re-explain · /workspace
   18 of 54 curated records loaded (~3850 chars) · the rest one `recall` away
 
 [DECISION]
@@ -334,7 +307,7 @@ engrim serve --mcp
 | `engrim prune` | `engrim prune [--keep-days <N> \| --all \| --vacuum]` | Purge old transcript logs and VACUUM the SQLite DB (opt-in retention; off by default). |
 | `engrim list` | `engrim list [-k 20] [--tag auth]` | List recent memories for the current project (supports `--tag`). |
 | `engrim project` | `engrim project [-p PROJECT \| --global \| --all] [--json]` | Records, active count and last write for one project tag (the current one by default), or every tag with `--all`. |
-| `engrim projects` | `engrim projects [--json]` | Every project's counts — the same as `engrim project --all`. |
+| `engrim projects` | `engrim projects [--json]` | Every project's counts: the same as `engrim project --all`. |
 | `engrim supersede`| `engrim supersede --id 12 --status superseded` | Mark a record superseded without erasing history. |
 | `engrim retire` | `engrim retire [--all] [--dry-run] [--json]` | Mark active `resume-pointer` record(s) done once their work is finished (never erases). |
 | `engrim sync` | `engrim sync [DIR]` | Mirror markdown memories into the store (idempotent seed-once). |
@@ -372,7 +345,7 @@ Engrim maintains a strict, transparent architectural boundary between open-sourc
 
 - **vs gbrain**: While gbrain is a provider-agnostic memory tool, `engrim` sets itself apart with a lightweight, local-first SQLite architecture. It requires zero cloud infrastructure, no complex daemon setup, and operates entirely on CPU.
 - **vs OpenCode & Codex Internal Stores**: Their built-in SQLite databases store *transcripts* (sessions, raw message parts, lossy compaction summaries) locked to one tool. `engrim` is a cross-tool *episodic* memory engine that tracks provenance across all your tools. With the OpenCode plugin, engrim serves as the durable memory layer rather than competing with it.
-- **vs Pi / Personal Companions**: Companion tools focus on social conversation history. `engrim` is engineered specifically for **software engineering projects**—preserving architectural decisions, invariant constraints, and technical state.
+- **vs Pi / Personal Companions**: Companion tools focus on social conversation history. `engrim` is engineered specifically for **software engineering projects**, preserving architectural decisions, invariant constraints, and technical state.
 
 ---
 
@@ -395,10 +368,9 @@ Engrim maintains a strict, transparent architectural boundary between open-sourc
 - **LinkedIn:** [linkedin.com/in/timgordon1](https://www.linkedin.com/in/timgordon1)
 - **Email:** [timgordontg@gmail.com](mailto:timgordontg@gmail.com)
 
-### Origin & Vision
-Engrim was born out of intensive production engineering on a 50,000-line algorithmic trading system running real capital. In high-stakes coding environments where an agent session may run across hundreds of turns and dozens of model context wipes, context loss and attention dilution degrade reasoning and waste tokens. Engrim was built to establish the definitive open-source standard for agent episodic memory—giving developers complete freedom from vendor lock-in.
+Tim built Engrim to establish the definitive open-source standard for agent episodic memory, giving developers complete freedom from vendor lock-in.
 
-Tim is currently raising a **$2.0M Seed round** for Engrim's In-VPC Autonomous CI infrastructure. For enterprise licensing, pilot deployments, or investment inquiries, reach out at [timgordontg@gmail.com](mailto:timgordontg@gmail.com).
+For enterprise licensing, advisory, pilot deployments, or custom agent integrations, reach out at [timgordontg@gmail.com](mailto:timgordontg@gmail.com).
 
 ---
 
