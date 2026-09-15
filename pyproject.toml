@@ -39,3 +39,6 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "engrim.hosts.opencode" = ["plugin.js", "AGENTS.md"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

@@ -80,7 +80,7 @@ graph TD
         OPENCODE["OpenCode<br/>(Plugin & MCP)"]
     end
 
-    subgraph CoreEngine ["engrim Core Engine (v1.4.5)"]
+    subgraph CoreEngine ["engrim Core Engine (v1.4.6)"]
         ADAPTERS["Adapters & Lifecycle Hooks<br/>(agy, claude, opencode, mcp)"]
         DOCTOR["Health & Diagnostic Engine<br/>(engrim doctor --fix)"]
         PROVENANCE["Agent Provenance Engine<br/>(origin_agent tracking)"]
