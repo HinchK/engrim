@@ -5,7 +5,7 @@
 # it and folds that run's store into the canonical `engrim-memory` artifact
 # with `engrim merge`, then deletes it. It is the only writer of the canonical
 # artifact, and its concurrency group lets GitHub run at most one copy at a
-# time, with `queue: max` keeping every pending run — so two agent runs that
+# time, with `queue: max` keeping every pending run - so two agent runs that
 # end together get two merges, in order, never a lost upload. Artifacts have
 # no compare-and-swap; this queue is the serialization. A merge that fails
 # leaves that run's store where it was (7-day retention); `workflow_dispatch`
@@ -94,7 +94,7 @@ jobs:
           root="${RUNNER_TEMP}/engrim-merge"
           lib=.github/lib
           # artifact.py answers 0 with the id, 3 when there is no such
-          # artifact, and fails otherwise — and a failure must fail this step:
+          # artifact, and fails otherwise - and a failure must fail this step:
           # mistaking an API error for "no canonical store yet" would upload
           # this one run's store as the canonical one.
           rc=0; folded="$(python3 "${lib}/artifact.py" "engrim-memory-run-${RUN_ID}" "${root}/in")" || rc=$?

@@ -9,7 +9,7 @@
 #                with SIGTERM, at the turn boundary, so gh-aw's harness
 #                starts a fresh run from the memory pack. (A signal, because
 #                the harness restarts only a failed process, and no hook
-#                outcome makes Claude Code exit non-zero on its own —
+#                outcome makes Claude Code exit non-zero on its own -
 #                `continue: false` and a failing Stop hook both exit 0.)
 #   StopFailure  the wall came first (a "prompt is too long" 400): write a
 #                mechanical crash pointer for the fresh run.
@@ -56,7 +56,7 @@ sys.exit(0 if pointer else 1)
 
 # The nudge a tool result carries while the mark is set.
 nudge() {
-  printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"Your context is nearly full and auto-compaction is off for this run. Either finish within two or three turns, or record where you are with engrim_add (type state, tag resume-pointer: what is done, what is next, and every comment or label you have already emitted). Once that record lands, end your turn: this session ends and a fresh one resumes from the memory pack — expected, not an error."}}'
+  printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"Your context is nearly full and auto-compaction is off for this run. Either finish within two or three turns, or record where you are with engrim_add (type state, tag resume-pointer: what is done, what is next, and every comment or label you have already emitted). Once that record lands, end your turn: this session ends and a fresh one resumes from the memory pack - expected, not an error."}}'
 }
 
 # What the model reads once its pointer is recorded.
@@ -65,13 +65,13 @@ end_of_turn() {
 }
 
 # From the StopFailure payload: the error, the last tool calls in the
-# transcript, and git status — mechanical, for the next session to read.
+# transcript, and git status - mechanical, for the next session to read.
 write_crash_pointer() {
   printf '%s' "$1" | python3 -c '
 import json, subprocess, sys
 d = json.load(sys.stdin)
 out = ["# Crash pointer (mechanical, written by the StopFailure hook)", "",
-       "Error: %s — %s" % (d.get("error"), str(d.get("error_details") or "")[:300]), "",
+       "Error: %s - %s" % (d.get("error"), str(d.get("error_details") or "")[:300]), "",
        "Last tool calls, oldest first:"]
 calls = []
 try:

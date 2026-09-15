@@ -1,6 +1,6 @@
 # engrim in GitHub Agentic Workflows
 
-Two workflows that give a [gh-aw](https://github.github.com/gh-aw/) agent memory across runs, and a restart instead of an auto-compaction when its context fills — engrim's [continue-as-clear workflow](../../README.md#8-continue-as-clear-workflow) with a harness restart standing in for `/clear`.
+Two workflows that give a [gh-aw](https://github.github.com/gh-aw/) agent memory across runs, and a restart instead of an auto-compaction when its context fills - engrim's [continue-as-clear workflow](../../README.md#8-continue-as-clear-workflow) with a harness restart standing in for `/clear`.
 
 | File | What it is |
 |---|---|
@@ -10,20 +10,20 @@ Two workflows that give a [gh-aw](https://github.github.com/gh-aw/) agent memory
 | `.github/lib/claude/settings.json` | Wires the hook to its five events. Installed into the agent's HOME with the script. |
 | `.github/lib/artifact.py` | The newest unexpired artifact with an exact name, optionally downloaded. Standard library. |
 
-The store operations — the seed's size, the capture, the pointer retirement — are engrim's own `projects`, `backup` and `retire` (1.4.0), run from the same wheel the server uses.
+The store operations - the seed's size, the capture, the pointer retirement - are engrim's own `projects`, `backup` and `retire` (1.4.0), run from the same wheel the server uses.
 
 ## How a run goes
 
 1. **Seed.** A pre-step downloads the newest `engrim-memory` artifact and copies it to `/tmp/gh-aw/engrim/memory.db`. No artifact yet means an empty store, never a failed run.
 2. **Serve.** gh-aw's MCP gateway starts engrim's stdio server in a stock `python:3.13.15-alpine3.24` container with the wheel mounted read-only on `PYTHONPATH`, `--network none`, `ENGRIM_EMBED=off` (pure lexical, standard library only) and the store mounted read-write from `/tmp`. The agent sees `engrim_context`, `engrim_add` and `engrim_recall`.
 3. **Work.** The prompt's first instruction is `engrim_context`. Records mean the agent is either resuming this job (an active `resume-pointer`) or reading what earlier runs learned. It writes records at phase boundaries and keeps one honest pointer that names every comment and label already emitted.
-4. **Restart instead of compacting.** When Claude Code's auto-compaction threshold trips, the `PreCompact` hook blocks the compaction (exit 2) and marks the session; the next tool result carries a `PostToolUse` nudge — "your context is nearly full: finish, or write your resume-pointer". When the model writes an `engrim_add` tagged `resume-pointer`, the hook asks it to end its turn, and the `Stop` hook then sends `SIGTERM` to Claude Code (exit 143), which gh-aw's harness treats as a signal termination and retries as a **fresh run**. That run boots from the memory pack. If the wall comes first (a "prompt is too long" 400), the harness retries anyway and a `StopFailure` hook leaves a mechanical crash pointer that `SessionStart` hands to the next session.
+4. **Restart instead of compacting.** When Claude Code's auto-compaction threshold trips, the `PreCompact` hook blocks the compaction (exit 2) and marks the session; the next tool result carries a `PostToolUse` nudge - "your context is nearly full: finish, or write your resume-pointer". When the model writes an `engrim_add` tagged `resume-pointer`, the hook asks it to end its turn, and the `Stop` hook then sends `SIGTERM` to Claude Code (exit 143), which gh-aw's harness treats as a signal termination and retries as a **fresh run**. That run boots from the memory pack. If the wall comes first (a "prompt is too long" 400), the harness retries anyway and a `StopFailure` hook leaves a mechanical crash pointer that `SessionStart` hands to the next session.
 5. **Capture.** A post-step (`if: always()`) takes a consistent copy of the store with `engrim backup` (sqlite's online backup API, safe while the server still holds the file) and uploads it as `engrim-memory-run-<run id>`.
 6. **Merge.** `engrim-memory.yml` fires on `workflow_run: completed`, downloads the canonical store and that run's store, runs `engrim merge` (content-keyed, so ids never collide; status monotonic, so a retirement on either side wins; idempotent), then `engrim retire --all` on the result (a pointer describes a working tree that no longer exists, and the next run must not mistake it for its own), uploads the result as `engrim-memory` and deletes the run store. Its concurrency group with `cancel-in-progress: false` and `queue: max` makes GitHub run one merge at a time and keep every pending one, so two agent runs that end together get two merges, in order.
 
 ## Install
 
-1. Copy `.github/` — the two workflow files and `lib/` — into your repository.
+1. Copy `.github/` - the two workflow files and `lib/` - into your repository.
 2. Replace the placeholders: `my-app` (`ENGRIM_PROJECT`, the stable project tag, and the `User-Agent` in `lib/artifact.py`) and `my-bot` (the login of the GitHub App or bot whose own issues must not be triaged; gh-aw files one when a run fails). The repository itself needs no edit: GitHub fills `GITHUB_REPOSITORY`.
 3. Pick the model and set the key. `engine.model` is `claude-sonnet-4-6`, the newest Anthropic model with a 200k default window; the key is the `ANTHROPIC_API_KEY` secret. The commented line beside them declares the window of a model Claude Code does not know (`CLAUDE_CODE_MAX_CONTEXT_TOKENS`). Then compile:
 
@@ -34,7 +34,7 @@ The store operations — the seed's size, the capture, the pointer retirement �
 4. Merge to the default branch. `workflow_run` triggers fire only for workflow files on the default branch, so the merge workflow is live once it is there. Until then runs still upload their stores, and the first merge folds them in order.
 5. Watch a run: the seed step prints `seeding from engrim-memory:` and one `engrim projects` line per project tag (`N (M active)  last …  my-app`), the capture step `backed up N records, M active -> /out/memory.db`, and the merge run `merged: +A add, ~S status, K skip`, then `retired K resume-pointer(s) · all projects` and the folded store's `projects` lines.
 
-Runner requirements: Docker (the gateway needs it anyway; the capture and merge steps run one-shot containers of the same image so file ownership on the store matches the server's), `python3` for `lib/artifact.py` and the seed step's `engrim projects` (the staged wheel on `PYTHONPATH`), `curl` and `sha256sum` for the wheel — all on `ubuntu-latest`.
+Runner requirements: Docker (the gateway needs it anyway; the capture and merge steps run one-shot containers of the same image so file ownership on the store matches the server's), `python3` for `lib/artifact.py` and the seed step's `engrim projects` (the staged wheel on `PYTHONPATH`), `curl` and `sha256sum` for the wheel - all on `ubuntu-latest`.
 
 ## Things to know
 
