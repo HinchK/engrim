@@ -49,7 +49,7 @@ def _assistant(message_id, turn_id, content, **data):
 
 def _write_events(path, events, *, final_newline=True):
     text = "\n".join(json.dumps(event, ensure_ascii=False) for event in events)
-    path.write_text(text + ("\n" if final_newline else ""), encoding="utf-8")
+    path.write_text(text + ("\n" if final_newline else ""), encoding="utf-8", newline="\n")
 
 
 def _rows(conn):
@@ -266,7 +266,7 @@ def test_delayed_turn_completion_is_polled_without_real_sleep(tmp_path):
         now[0] += _seconds
         if now[0] >= 0.15 and not appended[0]:
             appended[0] = True
-            with path.open("a", encoding="utf-8") as stream:
+            with path.open("a", encoding="utf-8", newline="\n") as stream:
                 for event in [
                     _assistant("a1", "t", "delayed"),
                     _event("assistant.turn_end", {"turnId": "t"}),
