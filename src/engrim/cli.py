@@ -44,7 +44,7 @@ from engrim.hosts import command_has_marker as _cmd_has
 try:
     from engrim import __version__
 except ImportError:
-    __version__ = "1.4.10"
+    __version__ = "1.4.11"
 
 DEFAULT_DB = os.path.expanduser("~/.engrim/memory.db")
 TYPES = ("decision", "fact", "feedback", "state", "reference", "user")
