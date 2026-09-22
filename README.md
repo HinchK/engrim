@@ -154,6 +154,12 @@ Project    : /workspace/my-project
     ✓ SessionEnd hook: valid
     ✓ Stop hook: valid
     ✓ UserPromptSubmit hook: valid
+  GitHub Copilot CLI (~/.copilot):
+    ✓ sessionStart hook: valid
+    ✓ userPromptSubmitted hook: valid
+    ✓ agentStop hook: valid
+    ✓ MCP server: /home/user/.local/bin/engrim (valid)
+    ✓ Status line: configured
 
 ================================================================================
 Result: All systems healthy. Zero issues detected across all agent hosts.
