@@ -47,7 +47,7 @@ graph TD
         COPILOT["GitHub Copilot CLI<br/>(Command hooks & MCP)"]
     end
 
-    subgraph CoreEngine ["engrim Core Engine (v1.4.8)"]
+    subgraph CoreEngine ["engrim Core Engine (v1.4.9)"]
         ADAPTERS["Adapters & Lifecycle Hooks<br/>(agy, claude, opencode, copilot, mcp)"]
         DOCTOR["Health & Diagnostic Engine<br/>(engrim doctor --fix)"]
         PROVENANCE["Agent Provenance Engine<br/>(origin_agent tracking)"]
