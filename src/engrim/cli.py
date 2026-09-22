@@ -40,7 +40,7 @@ import sys
 try:
     from engrim import __version__
 except ImportError:
-    __version__ = "1.4.9"
+    __version__ = "1.4.10"
 
 DEFAULT_DB = os.path.expanduser("~/.engrim/memory.db")
 TYPES = ("decision", "fact", "feedback", "state", "reference", "user")
